@@ -1,11 +1,11 @@
 [project]
 name = "fortnite-api-sdk"
-version = "0.1.0"
+version = "0.1.1"
 description = "Python SDK (sync + async) for the Fortnite API at api-fortnite.com"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "voredge", email = "dev@voredge.com" }]
+authors = [{ name = "Tettu0530" }]
 keywords = ["fortnite", "api", "sdk", "tournaments", "esports"]
 classifiers = [
     "Development Status :: 4 - Beta",
