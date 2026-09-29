@@ -95,7 +95,8 @@ def test_list_of_models_parsing(sync_client):
 def test_list_of_models_unwraps_single_list_envelope(sync_client):
     client, _ = sync_client({"status": 200, "notices": [{"title": "Down", "platforms": ["pc"]}]})
     result = client.news.get_notices()
-    assert len(result) == 1 and isinstance(result[0], NewsNotice)
+    assert len(result) == 1
+    assert isinstance(result[0], NewsNotice)
     assert result[0].platforms == ["pc"]
 
 
@@ -158,7 +159,8 @@ def test_weapons_major_minor_params(sync_client):
     client, rec = sync_client([])
     client.weapons.get(major=33, minor=10, ammo_type="light", secondary=True)
     q = rec.query()
-    assert q["major"] == ["33"] and q["minor"] == ["10"]
+    assert q["major"] == ["33"]
+    assert q["minor"] == ["10"]
     assert q["ammoType"] == ["light"]
     assert q["secondary"] == ["true"]
     assert "patch" not in q  # None values are dropped
@@ -300,12 +302,7 @@ def _resource_pairs() -> list[tuple[type, type]]:
     pairs = []
     for name in res_pkg.__all__ if hasattr(res_pkg, "__all__") else dir(res_pkg):
         obj = getattr(res_pkg, name)
-        if (
-            inspect.isclass(obj)
-            and issubclass(obj, Resource)
-            and obj is not Resource
-            and not name.startswith("Async")
-        ):
+        if inspect.isclass(obj) and issubclass(obj, Resource) and obj is not Resource and not name.startswith("Async"):
             pairs.append((obj, getattr(res_pkg, "Async" + name)))
     return pairs
 
@@ -323,7 +320,7 @@ def test_resource_pairs_cover_client():
     client.close()
 
 
-@pytest.mark.parametrize("sync_cls,async_cls", _resource_pairs(), ids=lambda c: c.__name__)
+@pytest.mark.parametrize(("sync_cls", "async_cls"), _resource_pairs(), ids=lambda c: c.__name__)
 def test_sync_async_parity(sync_cls, async_cls):
     sync_m = _public_methods(sync_cls)
     async_m = _public_methods(async_cls)
@@ -347,6 +344,7 @@ async def test_async_typed_and_same_url(sync_client):
     aclient, arec = make_async(payload)
     s = sclient.weapons.get(major=1, minor=2)
     a = await aclient.weapons.get(major=1, minor=2)
-    assert s == a and isinstance(a[0], WeaponListItemDto)
+    assert s == a
+    assert isinstance(a[0], WeaponListItemDto)
     assert str(srec.last.url) == str(arec.last.url)
     await aclient.close()

@@ -820,6 +820,27 @@ uv run python scripts/generate.py
 
 ---
 
+## 🛠️ Development
+
+```bash
+uv sync --locked --all-extras --dev   # set up the environment
+uv run ruff check . && uv run ruff format --check . && uv run mypy
+uv run pytest                         # offline unit tests with coverage
+FN_API_KEY=... uv run pytest -m live  # smoke tests against the real API
+```
+
+See [docs/TESTING.md](docs/TESTING.md) for every check CI runs, the live tests, regenerating the SDK
+from a new OpenAPI spec, and the release flow.
+
+---
+
+## 🤖 Agent Skill
+
+This repository ships an [Agent Skill](skills/fortnite-api/SKILL.md) that teaches AI coding agents (such as Claude Code)
+how to use this SDK correctly. See [skills/README.md](skills/README.md) for installation instructions.
+
+---
+
 ## 📝 License
 
 MIT

@@ -4,39 +4,119 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
 jobs:
-  build:
+  verify-version:
+    name: verify-version
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Tag must match pyproject and __version__
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          tag_version="${TAG#v}"
+          project_version="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          module_version="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/fortnite_api/__init__.py)"
+          echo "tag=${tag_version} pyproject=${project_version} __version__=${module_version}"
+          if [ "$tag_version" != "$project_version" ] || [ "$tag_version" != "$module_version" ]; then
+            echo "::error::Release tag ${TAG} does not match pyproject version ${project_version} / __version__ ${module_version}"
+            exit 1
+          fi
+
+  ci:
+    name: ci
+    needs: verify-version
+    uses: ./.github/workflows/ci.yml  # zizmor: ignore[self-repository] actionlint does not support "$/" yet
+    permissions:
+      contents: read
+
+  build:
+    name: build
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          # No cache in the release pipeline (avoids cache poisoning).
+          enable-cache: false
 
       - name: Build distributions
-        run: uv build
+        # Hash-pinned build backend; nothing else runs in this job before the upload.
+        run: uv build --build-constraints build-constraints.txt --require-hashes
 
-      - name: Check metadata
-        run: uvx twine check dist/*
-
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: dist
+          name: release-dist
           path: dist/
+          if-no-files-found: error
+          retention-days: 7
 
-  publish:
+  check-dist:
+    name: check-dist
+    # Runs twine on a downloaded copy, so it cannot change the files that get published.
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: false
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-dist
+          path: dist/
+
+      - name: Check metadata
+        # twine comes from the locked "dist" dependency group.
+        run: uv run --locked --only-group dist twine check --strict dist/*
+
+  publish:
+    name: publish
+    needs: [build, check-dist]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: pypi
       url: https://pypi.org/p/fortnite-api-sdk
     permissions:
-      id-token: write
+      contents: read
+      id-token: write # PyPI trusted publishing and Sigstore signing
+      attestations: write # store build provenance attestations
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: dist
+          name: release-dist
           path: dist/
 
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*
+          create-storage-record: false
+
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2

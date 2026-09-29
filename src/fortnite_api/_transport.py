@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import os
-from functools import lru_cache
-from typing import Any, BinaryIO, Union, get_origin
+from collections.abc import Mapping, Sequence
+from functools import cache
+from typing import Any, BinaryIO, TypeAlias, TypeVar, get_origin, overload
 
 import httpx
 from pydantic import BaseModel, TypeAdapter
@@ -11,10 +12,16 @@ from .errors import FortniteAPIError
 
 DEFAULT_BASE_URL = "https://prod.api-fortnite.com/api"
 
-FileInput = Union[bytes, bytearray, BinaryIO, str]
+FileInput: TypeAlias = bytes | bytearray | BinaryIO | str
+"""A replay file: raw bytes, an open binary file object, or a filesystem path."""
+
+FileTuple: TypeAlias = tuple[str, bytes, str]
+MultipartFiles: TypeAlias = Mapping[str, FileTuple] | Sequence[tuple[str, FileTuple]]
+
+T = TypeVar("T")
 
 
-@lru_cache(maxsize=None)
+@cache
 def _adapter(response_type: Any) -> TypeAdapter[Any]:
     return TypeAdapter(response_type)
 
@@ -31,7 +38,7 @@ class _BaseTransport:
             raise ValueError("api_key is required")
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
-        self.root_url = self.base_url[:-4] if self.base_url.endswith("/api") else self.base_url
+        self.root_url = self.base_url.removesuffix("/api")
         self.timeout = timeout
         self.fortnite_token = fortnite_token
 
@@ -50,7 +57,7 @@ class _BaseTransport:
         return headers
 
     @staticmethod
-    def _clean(params: dict[str, Any] | None) -> dict[str, Any] | None:
+    def _clean(params: Mapping[str, Any] | None) -> dict[str, Any] | None:
         if not params:
             return None
         cleaned = {k: v for k, v in params.items() if v is not None}
@@ -60,7 +67,7 @@ class _BaseTransport:
     def _error(resp: httpx.Response) -> FortniteAPIError:
         try:
             data: Any = resp.json()
-        except Exception:
+        except ValueError:
             data = {"error": "Request failed"}
         message = None
         if isinstance(data, dict):
@@ -106,7 +113,7 @@ class _BaseTransport:
         return data
 
     @staticmethod
-    def _file_tuple(file: FileInput, filename: str | None) -> tuple[str, bytes, str]:
+    def _file_tuple(file: FileInput, filename: str | None) -> FileTuple:
         if isinstance(file, str):
             with open(file, "rb") as handle:
                 content = handle.read()
@@ -119,14 +126,65 @@ class _BaseTransport:
             name = filename or str(getattr(file, "name", "replay.replay"))
         return (name, content, "application/octet-stream")
 
+    def _json_result(self, resp: httpx.Response, response_type: Any, *, unwrap: bool = True) -> Any:
+        if not resp.is_success:
+            raise self._error(resp)
+        data = resp.json()
+        return self._parse(self._unwrap(data) if unwrap else data, response_type)
+
+    def _binary_result(self, resp: httpx.Response) -> bytes:
+        if not resp.is_success:
+            raise self._error(resp)
+        return resp.content
+
+    def _redirect_result(self, resp: httpx.Response) -> str | None:
+        if resp.is_redirect:
+            location: str | None = resp.headers.get("location")
+            return location
+        if resp.is_success:
+            return str(resp.url)
+        raise self._error(resp)
+
 
 class SyncTransport(_BaseTransport):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str = DEFAULT_BASE_URL,
+        timeout: float = 30.0,
+        fortnite_token: str | None = None,
+    ) -> None:
+        super().__init__(api_key, base_url, timeout, fortnite_token)
         self._client = httpx.Client(timeout=self.timeout, follow_redirects=True)
 
     def close(self) -> None:
         self._client.close()
+
+    @overload
+    def request(
+        self,
+        method: str,
+        path: str,
+        version: str | None,
+        *,
+        params: Mapping[str, Any] | None = ...,
+        json_body: Any = ...,
+        fortnite_token: str | None = ...,
+        response_type: None = ...,
+    ) -> Any: ...
+
+    @overload
+    def request(
+        self,
+        method: str,
+        path: str,
+        version: str | None,
+        *,
+        params: Mapping[str, Any] | None = ...,
+        json_body: Any = ...,
+        fortnite_token: str | None = ...,
+        response_type: type[T],
+    ) -> T: ...
 
     def request(
         self,
@@ -134,7 +192,7 @@ class SyncTransport(_BaseTransport):
         path: str,
         version: str | None,
         *,
-        params: dict[str, Any] | None = None,
+        params: Mapping[str, Any] | None = None,
         json_body: Any = None,
         fortnite_token: str | None = None,
         response_type: Any = None,
@@ -146,18 +204,19 @@ class SyncTransport(_BaseTransport):
             json=self._body(json_body),
             headers=self._headers(fortnite_token),
         )
-        if not resp.is_success:
-            raise self._error(resp)
-        return self._parse(self._unwrap(resp.json()), response_type)
+        return self._json_result(resp, response_type)
 
     def request_binary(self, path: str, version: str | None, *, fortnite_token: str | None = None) -> bytes:
         resp = self._client.get(self._url(path, version), headers=self._headers(fortnite_token, json=False))
-        if not resp.is_success:
-            raise self._error(resp)
-        return resp.content
+        return self._binary_result(resp)
 
     def request_redirect(
-        self, path: str, version: str | None, *, params: dict[str, Any] | None = None, fortnite_token: str | None = None
+        self,
+        path: str,
+        version: str | None,
+        *,
+        params: Mapping[str, Any] | None = None,
+        fortnite_token: str | None = None,
     ) -> str | None:
         resp = self._client.get(
             self._url(path, version),
@@ -165,29 +224,64 @@ class SyncTransport(_BaseTransport):
             headers=self._headers(fortnite_token, json=False),
             follow_redirects=False,
         )
-        if resp.is_redirect:
-            return resp.headers.get("location")
-        if resp.is_success:
-            return str(resp.url)
-        raise self._error(resp)
+        return self._redirect_result(resp)
+
+    @overload
+    def request_multipart(
+        self, path: str, files: MultipartFiles, *, response_type: None = ..., unwrap: bool = ...
+    ) -> Any: ...
+
+    @overload
+    def request_multipart(
+        self, path: str, files: MultipartFiles, *, response_type: type[T], unwrap: bool = ...
+    ) -> T: ...
 
     def request_multipart(
-        self, path: str, files: Any, *, response_type: Any = None, unwrap: bool = True
+        self, path: str, files: MultipartFiles, *, response_type: Any = None, unwrap: bool = True
     ) -> Any:
         resp = self._client.post(self._url(path, "v1"), headers=self._headers(None, json=False), files=files)
-        if not resp.is_success:
-            raise self._error(resp)
-        data = self._unwrap(resp.json()) if unwrap else resp.json()
-        return self._parse(data, response_type)
+        return self._json_result(resp, response_type, unwrap=unwrap)
 
 
 class AsyncTransport(_BaseTransport):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str = DEFAULT_BASE_URL,
+        timeout: float = 30.0,
+        fortnite_token: str | None = None,
+    ) -> None:
+        super().__init__(api_key, base_url, timeout, fortnite_token)
         self._client = httpx.AsyncClient(timeout=self.timeout, follow_redirects=True)
 
     async def close(self) -> None:
         await self._client.aclose()
+
+    @overload
+    async def request(
+        self,
+        method: str,
+        path: str,
+        version: str | None,
+        *,
+        params: Mapping[str, Any] | None = ...,
+        json_body: Any = ...,
+        fortnite_token: str | None = ...,
+        response_type: None = ...,
+    ) -> Any: ...
+
+    @overload
+    async def request(
+        self,
+        method: str,
+        path: str,
+        version: str | None,
+        *,
+        params: Mapping[str, Any] | None = ...,
+        json_body: Any = ...,
+        fortnite_token: str | None = ...,
+        response_type: type[T],
+    ) -> T: ...
 
     async def request(
         self,
@@ -195,7 +289,7 @@ class AsyncTransport(_BaseTransport):
         path: str,
         version: str | None,
         *,
-        params: dict[str, Any] | None = None,
+        params: Mapping[str, Any] | None = None,
         json_body: Any = None,
         fortnite_token: str | None = None,
         response_type: Any = None,
@@ -207,18 +301,19 @@ class AsyncTransport(_BaseTransport):
             json=self._body(json_body),
             headers=self._headers(fortnite_token),
         )
-        if not resp.is_success:
-            raise self._error(resp)
-        return self._parse(self._unwrap(resp.json()), response_type)
+        return self._json_result(resp, response_type)
 
     async def request_binary(self, path: str, version: str | None, *, fortnite_token: str | None = None) -> bytes:
         resp = await self._client.get(self._url(path, version), headers=self._headers(fortnite_token, json=False))
-        if not resp.is_success:
-            raise self._error(resp)
-        return resp.content
+        return self._binary_result(resp)
 
     async def request_redirect(
-        self, path: str, version: str | None, *, params: dict[str, Any] | None = None, fortnite_token: str | None = None
+        self,
+        path: str,
+        version: str | None,
+        *,
+        params: Mapping[str, Any] | None = None,
+        fortnite_token: str | None = None,
     ) -> str | None:
         resp = await self._client.get(
             self._url(path, version),
@@ -226,17 +321,20 @@ class AsyncTransport(_BaseTransport):
             headers=self._headers(fortnite_token, json=False),
             follow_redirects=False,
         )
-        if resp.is_redirect:
-            return resp.headers.get("location")
-        if resp.is_success:
-            return str(resp.url)
-        raise self._error(resp)
+        return self._redirect_result(resp)
+
+    @overload
+    async def request_multipart(
+        self, path: str, files: MultipartFiles, *, response_type: None = ..., unwrap: bool = ...
+    ) -> Any: ...
+
+    @overload
+    async def request_multipart(
+        self, path: str, files: MultipartFiles, *, response_type: type[T], unwrap: bool = ...
+    ) -> T: ...
 
     async def request_multipart(
-        self, path: str, files: Any, *, response_type: Any = None, unwrap: bool = True
+        self, path: str, files: MultipartFiles, *, response_type: Any = None, unwrap: bool = True
     ) -> Any:
         resp = await self._client.post(self._url(path, "v1"), headers=self._headers(None, json=False), files=files)
-        if not resp.is_success:
-            raise self._error(resp)
-        data = self._unwrap(resp.json()) if unwrap else resp.json()
-        return self._parse(data, response_type)
+        return self._json_result(resp, response_type, unwrap=unwrap)

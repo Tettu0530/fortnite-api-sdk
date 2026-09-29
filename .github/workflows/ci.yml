@@ -4,50 +4,335 @@ on:
   push:
     branches: [main]
   pull_request:
+  merge_group:
+  workflow_dispatch:
+  # Reused by publish.yml so that a release runs the full suite on the tagged commit.
+  workflow_call:
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  FORCE_COLOR: "1"
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
-  test:
+  lint:
+    name: lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: Ruff check
+        run: uv run ruff check --output-format=github .
+
+      - name: Ruff format
+        run: uv run ruff format --check .
+
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: Mypy
+        run: uv run mypy
+
+  test:
+    name: test (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-suffix: ${{ matrix.python-version }}
 
       - name: Sync dependencies
-        run: uv sync --extra dev
+        run: uv sync --locked --all-extras --dev
 
-      - name: Lint
-        run: uv run ruff check src tests scripts
+      - name: Pytest
+        run: uv run pytest
 
-      - name: Test
-        run: uv run pytest -q
+      - name: Coverage summary
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: |
+          {
+            echo "## Coverage (ubuntu-latest, Python 3.12)"
+            echo
+            uv run coverage report --format=markdown
+          } >> "$GITHUB_STEP_SUMMARY"
 
-  build:
+      - name: Upload coverage report
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          if-no-files-found: error
+          retention-days: 14
+
+  test-lowest:
+    name: test (lowest direct deps)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.10"
+          enable-cache: true
+          cache-suffix: lowest
+
+      - name: Sync lowest direct dependencies
+        run: uv sync --resolution lowest-direct --all-extras --dev
+
+      - name: Pytest
+        # --no-sync keeps the lowest-direct environment instead of re-syncing to uv.lock.
+        run: uv run --no-sync pytest
+
+  codegen:
+    name: codegen
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: Regenerate client from openapi/swagger.json
+        run: uv run python scripts/generate.py
+
+      - name: Verify generated code is committed
+        run: |
+          git diff --exit-code
+          untracked="$(git status --porcelain --untracked-files=all)"
+          if [ -n "$untracked" ]; then
+            echo "::error::Generator produced files that are not committed:"
+            echo "$untracked"
+            exit 1
+          fi
+
+      - name: Check spec coverage
+        run: uv run python scripts/check_spec_coverage.py
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
 
       - name: Build distributions
-        run: uv build
+        # Hash-pinned build backend (same as the release pipeline).
+        run: uv build --build-constraints build-constraints.txt --require-hashes
 
       - name: Check metadata
-        run: uvx twine check dist/*
+        # twine comes from the locked "dist" dependency group, not from an unpinned uvx install.
+        run: uv run --locked --only-group dist twine check --strict dist/*
 
-      - name: Verify generator is up to date
+      - name: Read expected version
+        id: meta
         run: |
-          uv run python scripts/generate.py
-          git diff --exit-code src/fortnite_api
+          version="$(uv run --no-project python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke test wheel and sdist in isolated environments
+        env:
+          EXPECTED_VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          dist_dir="$PWD/dist"
+          work="$RUNNER_TEMP/smoke"
+          mkdir -p "$work"
+          cd "$work"
+          cat > smoke.py <<'PY'
+          import os
+          import sys
+
+          import fortnite_api
+          from fortnite_api import AsyncFortniteAPI, FortniteAPI, FortniteAPIError, models
+
+          expected = os.environ["EXPECTED_VERSION"]
+          assert fortnite_api.__version__ == expected, (fortnite_api.__version__, expected)
+          assert "site-packages" in (fortnite_api.__file__ or ""), fortnite_api.__file__
+          assert FortniteAPI and AsyncFortniteAPI and FortniteAPIError and models
+          print(f"ok: fortnite_api {fortnite_api.__version__} from {fortnite_api.__file__} on {sys.version}")
+          PY
+          for kind in whl tar.gz; do
+            artifact="$(ls "$dist_dir"/*."$kind")"
+            echo "::group::Install $(basename "$artifact")"
+            rm -rf venv
+            uv venv --python 3.12 venv
+            uv pip install --python venv/bin/python "$artifact"
+            venv/bin/python smoke.py
+            echo "::endgroup::"
+          done
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  docs-examples:
+    name: docs-examples
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Compile examples
+        run: uv run --no-project python -m py_compile examples/*.py
+
+      - name: Compile README python snippets
+        run: |
+          uv run --no-project python - <<'PY'
+          import ast
+          import re
+          import sys
+          import textwrap
+          from pathlib import Path
+
+          failures = 0
+          for path in [Path("README.md"), *sorted(Path("docs").rglob("*.md"))]:
+              if not path.is_file():
+                  continue
+              text = path.read_text(encoding="utf-8")
+              pattern = re.compile(r"^([ \t]*)```python[^\n]*\n(.*?)^\1```", re.S | re.M)
+              for match in pattern.finditer(text):
+                  line = text.count("\n", 0, match.start()) + 1
+                  source = textwrap.dedent(match.group(2))
+                  try:
+                      compile(source, f"{path}:{line}", "exec", flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
+                  except SyntaxError as exc:
+                      failures += 1
+                      print(f"::error file={path},line={line}::python snippet does not compile: {exc}")
+          sys.exit(1 if failures else 0)
+          PY
+
+  workflow-lint:
+    name: workflow-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: false
+
+      - name: actionlint
+        env:
+          ACTIONLINT_VERSION: "1.7.12"
+          # From actionlint_1.7.12_checksums.txt of the v1.7.12 release.
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          set -euo pipefail
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/$archive" "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+          (cd "$RUNNER_TEMP" && echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum -c - && tar -xzf "$archive" actionlint)
+          "$RUNNER_TEMP/actionlint" -color
+
+      - name: zizmor
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uvx zizmor@1.30.1 --format=github .github
+
+  ci-ok:
+    name: ci-ok
+    if: always()
+    needs:
+      - lint
+      - typecheck
+      - test
+      - test-lowest
+      - codegen
+      - build
+      - docs-examples
+      - workflow-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify all required jobs succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          echo "$NEEDS" | jq -e 'to_entries | all(.value.result == "success")' > /dev/null
