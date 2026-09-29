@@ -1,16 +1,22 @@
 from __future__ import annotations
 
 import os
-from typing import Any, BinaryIO, Union
+from functools import lru_cache
+from typing import Any, BinaryIO, Union, get_origin
 
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter
 
 from .errors import FortniteAPIError
 
 DEFAULT_BASE_URL = "https://prod.api-fortnite.com/api"
 
 FileInput = Union[bytes, bytearray, BinaryIO, str]
+
+
+@lru_cache(maxsize=None)
+def _adapter(response_type: Any) -> TypeAdapter[Any]:
+    return TypeAdapter(response_type)
 
 
 class _BaseTransport:
@@ -62,16 +68,28 @@ class _BaseTransport:
         return FortniteAPIError(message or f"Request failed with status {resp.status_code}", resp.status_code, data)
 
     @staticmethod
-    def _parse(data: Any, model: type[BaseModel] | None, is_list: bool) -> Any:
-        if model is None:
+    def _parse(data: Any, response_type: Any = None) -> Any:
+        """Validate ``data`` against ``response_type`` (a model, ``list[Model]``, ``dict[str, ...]``...).
+
+        ``None`` returns the raw JSON untouched. For list types, a dict holding exactly one
+        list value (e.g. ``{"status": 200, "patches": [...]}``) is unwrapped to that list.
+        """
+        if response_type is None:
             return data
-        if is_list:
-            if isinstance(data, dict):
-                lists = [v for v in data.values() if isinstance(v, list)]
-                if len(lists) == 1:
-                    data = lists[0]
-            return [model.model_validate(item) for item in data]
-        return model.model_validate(data)
+        if get_origin(response_type) is list and isinstance(data, dict):
+            lists = [v for v in data.values() if isinstance(v, list)]
+            if len(lists) == 1:
+                data = lists[0]
+        return _adapter(response_type).validate_python(data)
+
+    @staticmethod
+    def _body(body: Any) -> Any:
+        """Serialise request bodies: pydantic models are dumped by alias without ``None`` fields."""
+        if isinstance(body, BaseModel):
+            return body.model_dump(mode="json", by_alias=True, exclude_none=True)
+        if isinstance(body, (list, tuple)):
+            return [_BaseTransport._body(item) for item in body]
+        return body
 
     @staticmethod
     def _unwrap(data: Any) -> Any:
@@ -98,7 +116,7 @@ class _BaseTransport:
             name = filename or "replay.replay"
         else:
             content = file.read()
-            name = filename or getattr(file, "name", "replay.replay")
+            name = filename or str(getattr(file, "name", "replay.replay"))
         return (name, content, "application/octet-stream")
 
 
@@ -119,19 +137,18 @@ class SyncTransport(_BaseTransport):
         params: dict[str, Any] | None = None,
         json_body: Any = None,
         fortnite_token: str | None = None,
-        model: type[BaseModel] | None = None,
-        is_list: bool = False,
+        response_type: Any = None,
     ) -> Any:
         resp = self._client.request(
             method,
             self._url(path, version),
             params=self._clean(params),
-            json=json_body,
+            json=self._body(json_body),
             headers=self._headers(fortnite_token),
         )
         if not resp.is_success:
             raise self._error(resp)
-        return self._parse(self._unwrap(resp.json()), model, is_list)
+        return self._parse(self._unwrap(resp.json()), response_type)
 
     def request_binary(self, path: str, version: str | None, *, fortnite_token: str | None = None) -> bytes:
         resp = self._client.get(self._url(path, version), headers=self._headers(fortnite_token, json=False))
@@ -155,13 +172,13 @@ class SyncTransport(_BaseTransport):
         raise self._error(resp)
 
     def request_multipart(
-        self, path: str, files: Any, *, model: type[BaseModel] | None = None, is_list: bool = False, unwrap: bool = True
+        self, path: str, files: Any, *, response_type: Any = None, unwrap: bool = True
     ) -> Any:
         resp = self._client.post(self._url(path, "v1"), headers=self._headers(None, json=False), files=files)
         if not resp.is_success:
             raise self._error(resp)
         data = self._unwrap(resp.json()) if unwrap else resp.json()
-        return self._parse(data, model, is_list)
+        return self._parse(data, response_type)
 
 
 class AsyncTransport(_BaseTransport):
@@ -181,19 +198,18 @@ class AsyncTransport(_BaseTransport):
         params: dict[str, Any] | None = None,
         json_body: Any = None,
         fortnite_token: str | None = None,
-        model: type[BaseModel] | None = None,
-        is_list: bool = False,
+        response_type: Any = None,
     ) -> Any:
         resp = await self._client.request(
             method,
             self._url(path, version),
             params=self._clean(params),
-            json=json_body,
+            json=self._body(json_body),
             headers=self._headers(fortnite_token),
         )
         if not resp.is_success:
             raise self._error(resp)
-        return self._parse(self._unwrap(resp.json()), model, is_list)
+        return self._parse(self._unwrap(resp.json()), response_type)
 
     async def request_binary(self, path: str, version: str | None, *, fortnite_token: str | None = None) -> bytes:
         resp = await self._client.get(self._url(path, version), headers=self._headers(fortnite_token, json=False))
@@ -217,10 +233,10 @@ class AsyncTransport(_BaseTransport):
         raise self._error(resp)
 
     async def request_multipart(
-        self, path: str, files: Any, *, model: type[BaseModel] | None = None, is_list: bool = False, unwrap: bool = True
+        self, path: str, files: Any, *, response_type: Any = None, unwrap: bool = True
     ) -> Any:
         resp = await self._client.post(self._url(path, "v1"), headers=self._headers(None, json=False), files=files)
         if not resp.is_success:
             raise self._error(resp)
         data = self._unwrap(resp.json()) if unwrap else resp.json()
-        return self._parse(data, model, is_list)
+        return self._parse(data, response_type)

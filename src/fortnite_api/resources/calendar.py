@@ -5,15 +5,21 @@ from ._base import Resource
 
 class CalendarResource(Resource):
     def get_season(self, *, fortnite_token: str | None = None) -> SeasonEntryDto:
-        """Get the current Fortnite season number and start/end dates."""
+        """Get the current Fortnite season number and start/end dates.
+
+        ``GET /api/v1/season``
+        """
         return self._t.request("GET", "/season", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=SeasonEntryDto, is_list=False)
+            response_type=SeasonEntryDto)
 
 
 class AsyncCalendarResource(Resource):
     async def get_season(self, *, fortnite_token: str | None = None) -> SeasonEntryDto:
-        """Get the current Fortnite season number and start/end dates."""
+        """Get the current Fortnite season number and start/end dates.
+
+        ``GET /api/v1/season``
+        """
         return await self._t.request("GET", "/season", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=SeasonEntryDto, is_list=False)
+            response_type=SeasonEntryDto)

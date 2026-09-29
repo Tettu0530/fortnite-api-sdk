@@ -2,55 +2,90 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..models import EventLeaderboardDto, EventLeaderboardEntryDto, PlayerWindowStandingDto
 from ._base import Resource
 
 class EventsResource(Resource):
     def get_player_history(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Get a player's event participation history."""
+        """Get a player's event participation history. Requires x-fortnite-token — Epic's history endpoint does
+        not accept service auth. Obtain a token via GET /api/v1/oauth/get-token → POST
+        /api/v1/oauth/complete.
+
+        ``GET /api/v2/events/players/{accountId}/history``
+        """
         return self._t.request("GET", f"/events/players/{account_id}/history", "v2",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
-    def get_window_leaderboard(self, event_id: str, event_window_id: str, *, page: int | None = None, leaderboard_def: str | None = None, fortnite_token: str | None = None) -> Any:
-        """Get the paginated leaderboard for a specific event window."""
+    def get_window_leaderboard(self, event_id: str, event_window_id: str, *, page: int | None = None, leaderboard_def: str | None = None, round: int | None = None, instance_id_format: str | None = None, fortnite_token: str | None = None) -> EventLeaderboardDto:
+        """Get the paginated leaderboard for a specific event window. Use leaderboardDef to resolve a
+        cumulative or rank-tier leaderboard definition.
+
+        ``GET /api/v2/events/{eventId}/windows/{eventWindowId}/leaderboard``
+        """
         return self._t.request("GET", f"/events/{event_id}/windows/{event_window_id}/leaderboard", "v2",
-            params={"page": page, "leaderboardDef": leaderboard_def}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            params={"page": page, "leaderboardDef": leaderboard_def, "round": round, "instanceIdFormat": instance_id_format}, json_body=None, fortnite_token=fortnite_token,
+            response_type=EventLeaderboardDto)
 
-    def get_window_leaderboard_player(self, event_id: str, event_window_id: str, *, account_id: str | None = None, fortnite_token: str | None = None) -> Any:
-        """Find a player's rank and surrounding entries in an event window leaderboard."""
+    def get_window_leaderboard_player(self, event_id: str, event_window_id: str, *, account_id: str | None = None, fortnite_token: str | None = None) -> list[EventLeaderboardEntryDto]:
+        """Find a player's rank and surrounding entries in an event window leaderboard. Works for any placement
+        including beyond top 10k. No x-fortnite-token required.
+
+        ``GET /api/v2/events/{eventId}/windows/{eventWindowId}/leaderboard/player``
+        """
         return self._t.request("GET", f"/events/{event_id}/windows/{event_window_id}/leaderboard/player", "v2",
             params={"accountId": account_id}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=list[EventLeaderboardEntryDto])
 
-    def get_player_window_standing(self, event_id: str, event_window_id: str, account_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Get a player's standing in a specific event window."""
+    def get_player_window_standing(self, event_id: str, event_window_id: str, account_id: str, *, rank_hint: int | None = None, max_pages: int | None = None, fortnite_token: str | None = None) -> PlayerWindowStandingDto:
+        """Get a player's standing (rank, points, team and per-match tracked stats) in an event window. Service
+        token only, no x-fortnite-token needed.
+
+        ``GET /api/v2/events/{eventId}/windows/{eventWindowId}/players/{accountId}``
+        """
         return self._t.request("GET", f"/events/{event_id}/windows/{event_window_id}/players/{account_id}", "v2",
-            params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            params={"rankHint": rank_hint, "maxPages": max_pages}, json_body=None, fortnite_token=fortnite_token,
+            response_type=PlayerWindowStandingDto)
 
 
 class AsyncEventsResource(Resource):
     async def get_player_history(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Get a player's event participation history."""
+        """Get a player's event participation history. Requires x-fortnite-token — Epic's history endpoint does
+        not accept service auth. Obtain a token via GET /api/v1/oauth/get-token → POST
+        /api/v1/oauth/complete.
+
+        ``GET /api/v2/events/players/{accountId}/history``
+        """
         return await self._t.request("GET", f"/events/players/{account_id}/history", "v2",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
-    async def get_window_leaderboard(self, event_id: str, event_window_id: str, *, page: int | None = None, leaderboard_def: str | None = None, fortnite_token: str | None = None) -> Any:
-        """Get the paginated leaderboard for a specific event window."""
+    async def get_window_leaderboard(self, event_id: str, event_window_id: str, *, page: int | None = None, leaderboard_def: str | None = None, round: int | None = None, instance_id_format: str | None = None, fortnite_token: str | None = None) -> EventLeaderboardDto:
+        """Get the paginated leaderboard for a specific event window. Use leaderboardDef to resolve a
+        cumulative or rank-tier leaderboard definition.
+
+        ``GET /api/v2/events/{eventId}/windows/{eventWindowId}/leaderboard``
+        """
         return await self._t.request("GET", f"/events/{event_id}/windows/{event_window_id}/leaderboard", "v2",
-            params={"page": page, "leaderboardDef": leaderboard_def}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            params={"page": page, "leaderboardDef": leaderboard_def, "round": round, "instanceIdFormat": instance_id_format}, json_body=None, fortnite_token=fortnite_token,
+            response_type=EventLeaderboardDto)
 
-    async def get_window_leaderboard_player(self, event_id: str, event_window_id: str, *, account_id: str | None = None, fortnite_token: str | None = None) -> Any:
-        """Find a player's rank and surrounding entries in an event window leaderboard."""
+    async def get_window_leaderboard_player(self, event_id: str, event_window_id: str, *, account_id: str | None = None, fortnite_token: str | None = None) -> list[EventLeaderboardEntryDto]:
+        """Find a player's rank and surrounding entries in an event window leaderboard. Works for any placement
+        including beyond top 10k. No x-fortnite-token required.
+
+        ``GET /api/v2/events/{eventId}/windows/{eventWindowId}/leaderboard/player``
+        """
         return await self._t.request("GET", f"/events/{event_id}/windows/{event_window_id}/leaderboard/player", "v2",
             params={"accountId": account_id}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=list[EventLeaderboardEntryDto])
 
-    async def get_player_window_standing(self, event_id: str, event_window_id: str, account_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Get a player's standing in a specific event window."""
+    async def get_player_window_standing(self, event_id: str, event_window_id: str, account_id: str, *, rank_hint: int | None = None, max_pages: int | None = None, fortnite_token: str | None = None) -> PlayerWindowStandingDto:
+        """Get a player's standing (rank, points, team and per-match tracked stats) in an event window. Service
+        token only, no x-fortnite-token needed.
+
+        ``GET /api/v2/events/{eventId}/windows/{eventWindowId}/players/{accountId}``
+        """
         return await self._t.request("GET", f"/events/{event_id}/windows/{event_window_id}/players/{account_id}", "v2",
-            params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            params={"rankHint": rank_hint, "maxPages": max_pages}, json_body=None, fortnite_token=fortnite_token,
+            response_type=PlayerWindowStandingDto)

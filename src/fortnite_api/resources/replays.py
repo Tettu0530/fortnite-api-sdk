@@ -1,124 +1,287 @@
 from __future__ import annotations
 
+import warnings
 from typing import Any
 
 from ._base import Resource
 
 class ReplaysResource(Resource):
     def download(self, match_id: str, *, fortnite_token: str | None = None) -> bytes:
-        """Download a tournament .replay file by match ID."""
+        """Download a tournament .replay file by match ID. Returns the raw .replay binary (application/octet-
+        stream). Match IDs come from Epic's tournament events API.
+
+        ``GET /api/v1/replays/{matchId}``
+        """
         return self._t.request_binary(f"/replays/{match_id}", "v1", fortnite_token=fortnite_token)
 
     def get_metadata(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Get the raw chunk manifest (metadata) for a tournament replay."""
+        """Get the raw chunk manifest (metadata) for a tournament replay. Returns Events, DataChunks,
+        Checkpoints arrays with timing info.
+
+        ``GET /api/v1/replays/{matchId}/metadata``
+        """
         return self._t.request("GET", f"/replays/{match_id}/metadata", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     def parse(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Download and fully parse a tournament replay by match ID."""
+        """Download and fully parse a tournament replay by match ID — the whole file. Returns everything the
+        sub-endpoints return, combined: per-player stats and weapon tables (lobby), storm zones, map objects
+        (bus/drops/llamas/reboot vans), ground loot, and the timeline with the full killfeed. The rows are
+        identical to the sub-endpoints', but the envelope differs: everything is under "game", and the loot
+        array is "game.loot" (it is "loot.pickups" on /parse/loot). Subtract "referenceTime" from any
+        absolute time. worldBounds and the map projection of the storm (map.zones) are only on /parse/map.
+        Field reference: https://api-fortnite.com/docs/replay-parser Subject to per-plan parsing quota
+        limits (5 credits).
+
+        ``GET /api/v1/replays/{matchId}/parse``
+        """
         return self._t.request("GET", f"/replays/{match_id}/parse", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     def parse_broadcast(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Download and parse a tournament replay — full broadcast payload."""
+        """DEPRECATED — use GET /{matchId}/parse instead, which returns the same combined payload for 5
+        credits. This route now serves the exact same result as /parse (same cache, 5 credits) and will be
+        removed in v2.
+
+        ``GET /api/v1/replays/{matchId}/parse/broadcast``
+
+        .. deprecated::
+            This endpoint is marked as deprecated by the API.
+            Use replays.parse() or the individual parse_* methods instead.
+        """
+        warnings.warn(
+            'replays.parse_broadcast() calls GET /api/v1/replays/{matchId}/parse/broadcast, which is deprecated by the API. Use replays.parse() or the individual parse_* methods instead.',
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self._t.request("GET", f"/replays/{match_id}/parse/broadcast", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     def parse_lobby(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Download and parse a tournament replay — full player lobby."""
+        """Download and parse a tournament replay — full player lobby. Returns all players with kills,
+        placement, damage, reboots, headshots, teamKills, death info, and cosmetics. Subject to per-plan
+        parsing quota limits (5 credits).
+
+        ``GET /api/v1/replays/{matchId}/parse/lobby``
+        """
         return self._t.request("GET", f"/replays/{match_id}/parse/lobby", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     def parse_loot(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Download and parse a tournament replay — ground loot."""
+        """Download and parse a tournament replay — ground loot. Server replays give whole-map loot coverage
+        (vs ~150m radius for client replays). Returns all item spawns: position, item ID, picked-up status
+        and time. Coordinates are map units derived from Unreal world cm: x = ueX/18.2 − 550, y = −ueY/18.2,
+        z = ueZ/18.2 (invert to get Unreal coords). All times (spawnTime, pickedUpTime) are on the replay
+        world clock, which starts during the warmup lobby — subtract referenceTime for match-relative times.
+        Do NOT subtract matchStartTime: it is a skydive-gap heuristic that can land minutes into the match
+        and push most pickups negative; it is kept only for existing consumers. Warmup-island loot appears
+        far outside the main map bounds. spawnTime for pre-placed floor loot is when the actor first
+        replicated, not when a player could see it. Subject to per-plan parsing quota limits (5 credits).
+
+        ``GET /api/v1/replays/{matchId}/parse/loot``
+        """
         return self._t.request("GET", f"/replays/{match_id}/parse/loot", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     def parse_map(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Download and parse a tournament replay — map context."""
+        """Download and parse a tournament replay — map context. Returns bus path, storm circles, supply drops,
+        llamas, reboot vans. Subject to per-plan parsing quota limits (5 credits).
+
+        ``GET /api/v1/replays/{matchId}/parse/map``
+        """
         return self._t.request("GET", f"/replays/{match_id}/parse/map", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     def parse_stats(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Download and parse a tournament replay — stats only."""
+        """Download and parse a tournament replay — stats only. Faster than full parse. Returns name, replayId,
+        version, playlist, teamSize, teamCount, isTournament, tournamentRound, stats. Subject to per-plan
+        parsing quota limits (1 credit).
+
+        ``GET /api/v1/replays/{matchId}/parse/stats``
+        """
         return self._t.request("GET", f"/replays/{match_id}/parse/stats", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     def parse_timeline(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Download and parse a tournament replay — match timeline."""
+        """Download and parse a tournament replay — match timeline. Returns chronological event feed: kills,
+        knocks, death, damage dealt/taken, heals, pickups. Subject to per-plan parsing quota limits (5
+        credits).
+
+        ``GET /api/v1/replays/{matchId}/parse/timeline``
+        """
         return self._t.request("GET", f"/replays/{match_id}/parse/timeline", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
+
+    def parse_tracks(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
+        """Download and parse a tournament replay — per-player tracks for interactive map playback. For every
+        player: downsampled movement samples [t, x, y, z, stateFlags], health/shield curve, held-weapon
+        changes, item pickups, material deltas, damage dealt and life events (knock/death/revive/reboot) —
+        plus storm circle phases and the kill feed. This is the ONLY endpoint that returns player positions:
+        /parse and the deprecated /parse/broadcast never carried them. Sample times are already relative to
+        referenceTime; x/y are map units (same convention as /parse/loot), z = ueZ/18.2. Subject to per-plan
+        parsing quota limits (5 credits).
+
+        ``GET /api/v1/replays/{matchId}/parse/tracks``
+        """
+        return self._t.request("GET", f"/replays/{match_id}/parse/tracks", "v1",
+            params=None, json_body=None, fortnite_token=fortnite_token,
+            response_type=None)
 
     def parse_zones(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Download and parse a tournament replay — storm zones."""
+        """Download and parse a tournament replay — storm zones. Returns all safe zone phases with timing,
+        positions, and damage per tick. Subject to per-plan parsing quota limits (5 credits).
+
+        ``GET /api/v1/replays/{matchId}/parse/zones``
+        """
         return self._t.request("GET", f"/replays/{match_id}/parse/zones", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
 
 class AsyncReplaysResource(Resource):
     async def download(self, match_id: str, *, fortnite_token: str | None = None) -> bytes:
-        """Download a tournament .replay file by match ID."""
+        """Download a tournament .replay file by match ID. Returns the raw .replay binary (application/octet-
+        stream). Match IDs come from Epic's tournament events API.
+
+        ``GET /api/v1/replays/{matchId}``
+        """
         return await self._t.request_binary(f"/replays/{match_id}", "v1", fortnite_token=fortnite_token)
 
     async def get_metadata(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Get the raw chunk manifest (metadata) for a tournament replay."""
+        """Get the raw chunk manifest (metadata) for a tournament replay. Returns Events, DataChunks,
+        Checkpoints arrays with timing info.
+
+        ``GET /api/v1/replays/{matchId}/metadata``
+        """
         return await self._t.request("GET", f"/replays/{match_id}/metadata", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     async def parse(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Download and fully parse a tournament replay by match ID."""
+        """Download and fully parse a tournament replay by match ID — the whole file. Returns everything the
+        sub-endpoints return, combined: per-player stats and weapon tables (lobby), storm zones, map objects
+        (bus/drops/llamas/reboot vans), ground loot, and the timeline with the full killfeed. The rows are
+        identical to the sub-endpoints', but the envelope differs: everything is under "game", and the loot
+        array is "game.loot" (it is "loot.pickups" on /parse/loot). Subtract "referenceTime" from any
+        absolute time. worldBounds and the map projection of the storm (map.zones) are only on /parse/map.
+        Field reference: https://api-fortnite.com/docs/replay-parser Subject to per-plan parsing quota
+        limits (5 credits).
+
+        ``GET /api/v1/replays/{matchId}/parse``
+        """
         return await self._t.request("GET", f"/replays/{match_id}/parse", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     async def parse_broadcast(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Download and parse a tournament replay — full broadcast payload."""
+        """DEPRECATED — use GET /{matchId}/parse instead, which returns the same combined payload for 5
+        credits. This route now serves the exact same result as /parse (same cache, 5 credits) and will be
+        removed in v2.
+
+        ``GET /api/v1/replays/{matchId}/parse/broadcast``
+
+        .. deprecated::
+            This endpoint is marked as deprecated by the API.
+            Use replays.parse() or the individual parse_* methods instead.
+        """
+        warnings.warn(
+            'replays.parse_broadcast() calls GET /api/v1/replays/{matchId}/parse/broadcast, which is deprecated by the API. Use replays.parse() or the individual parse_* methods instead.',
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return await self._t.request("GET", f"/replays/{match_id}/parse/broadcast", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     async def parse_lobby(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Download and parse a tournament replay — full player lobby."""
+        """Download and parse a tournament replay — full player lobby. Returns all players with kills,
+        placement, damage, reboots, headshots, teamKills, death info, and cosmetics. Subject to per-plan
+        parsing quota limits (5 credits).
+
+        ``GET /api/v1/replays/{matchId}/parse/lobby``
+        """
         return await self._t.request("GET", f"/replays/{match_id}/parse/lobby", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     async def parse_loot(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Download and parse a tournament replay — ground loot."""
+        """Download and parse a tournament replay — ground loot. Server replays give whole-map loot coverage
+        (vs ~150m radius for client replays). Returns all item spawns: position, item ID, picked-up status
+        and time. Coordinates are map units derived from Unreal world cm: x = ueX/18.2 − 550, y = −ueY/18.2,
+        z = ueZ/18.2 (invert to get Unreal coords). All times (spawnTime, pickedUpTime) are on the replay
+        world clock, which starts during the warmup lobby — subtract referenceTime for match-relative times.
+        Do NOT subtract matchStartTime: it is a skydive-gap heuristic that can land minutes into the match
+        and push most pickups negative; it is kept only for existing consumers. Warmup-island loot appears
+        far outside the main map bounds. spawnTime for pre-placed floor loot is when the actor first
+        replicated, not when a player could see it. Subject to per-plan parsing quota limits (5 credits).
+
+        ``GET /api/v1/replays/{matchId}/parse/loot``
+        """
         return await self._t.request("GET", f"/replays/{match_id}/parse/loot", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     async def parse_map(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Download and parse a tournament replay — map context."""
+        """Download and parse a tournament replay — map context. Returns bus path, storm circles, supply drops,
+        llamas, reboot vans. Subject to per-plan parsing quota limits (5 credits).
+
+        ``GET /api/v1/replays/{matchId}/parse/map``
+        """
         return await self._t.request("GET", f"/replays/{match_id}/parse/map", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     async def parse_stats(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Download and parse a tournament replay — stats only."""
+        """Download and parse a tournament replay — stats only. Faster than full parse. Returns name, replayId,
+        version, playlist, teamSize, teamCount, isTournament, tournamentRound, stats. Subject to per-plan
+        parsing quota limits (1 credit).
+
+        ``GET /api/v1/replays/{matchId}/parse/stats``
+        """
         return await self._t.request("GET", f"/replays/{match_id}/parse/stats", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     async def parse_timeline(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Download and parse a tournament replay — match timeline."""
+        """Download and parse a tournament replay — match timeline. Returns chronological event feed: kills,
+        knocks, death, damage dealt/taken, heals, pickups. Subject to per-plan parsing quota limits (5
+        credits).
+
+        ``GET /api/v1/replays/{matchId}/parse/timeline``
+        """
         return await self._t.request("GET", f"/replays/{match_id}/parse/timeline", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
+
+    async def parse_tracks(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
+        """Download and parse a tournament replay — per-player tracks for interactive map playback. For every
+        player: downsampled movement samples [t, x, y, z, stateFlags], health/shield curve, held-weapon
+        changes, item pickups, material deltas, damage dealt and life events (knock/death/revive/reboot) —
+        plus storm circle phases and the kill feed. This is the ONLY endpoint that returns player positions:
+        /parse and the deprecated /parse/broadcast never carried them. Sample times are already relative to
+        referenceTime; x/y are map units (same convention as /parse/loot), z = ueZ/18.2. Subject to per-plan
+        parsing quota limits (5 credits).
+
+        ``GET /api/v1/replays/{matchId}/parse/tracks``
+        """
+        return await self._t.request("GET", f"/replays/{match_id}/parse/tracks", "v1",
+            params=None, json_body=None, fortnite_token=fortnite_token,
+            response_type=None)
 
     async def parse_zones(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Download and parse a tournament replay — storm zones."""
+        """Download and parse a tournament replay — storm zones. Returns all safe zone phases with timing,
+        positions, and damage per tick. Subject to per-plan parsing quota limits (5 credits).
+
+        ``GET /api/v1/replays/{matchId}/parse/zones``
+        """
         return await self._t.request("GET", f"/replays/{match_id}/parse/zones", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)

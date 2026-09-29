@@ -6,123 +6,185 @@ from ._base import Resource
 
 class AccountResource(Resource):
     def get_by_id(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Get account information by Epic account ID."""
+        """Get account information by Epic account ID.
+
+        ``GET /api/v1/account/{accountId}``
+        """
         return self._t.request("GET", f"/account/{account_id}", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     def get_bulk(self, account_ids: list[str], *, fortnite_token: str | None = None) -> Any:
-        """Get multiple accounts by Epic account IDs in a single request."""
+        """Get multiple accounts by Epic account IDs in a single request.
+
+        ``GET /api/v1/account/bulk``
+        """
         return self._t.request("GET", "/account/bulk", "v1",
             params={"accountId": account_ids}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     def get_by_display_name(self, display_name: str, *, fortnite_token: str | None = None) -> Any:
-        """Get account information by Epic display name."""
+        """Get account information by Epic display name.
+
+        ``GET /api/v1/account/displayName/{displayName}``
+        """
         return self._t.request("GET", f"/account/displayName/{display_name}", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     def get_display_names(self, account_ids: list[str], *, fortnite_token: str | None = None) -> Any:
-        """Resolve one or more Epic account IDs to their display names."""
+        """Resolve one or more Epic account IDs to their display names.
+
+        ``GET /api/v1/account/displaynames``
+        """
         return self._t.request("GET", "/account/displaynames", "v1",
-            params={"ids": ",".join(account_ids)}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            params={"ids": ",".join(account_ids) if account_ids is not None else None}, json_body=None, fortnite_token=fortnite_token,
+            response_type=None)
 
     def bulk_external_display_names(self, body: Any, *, fortnite_token: str | None = None) -> Any:
-        """Bulk lookup accounts by external display names."""
+        """Bulk lookup accounts by external display names.
+
+        ``POST /api/v1/account/external/displayNames/bulk``
+        """
         return self._t.request("POST", "/account/external/displayNames/bulk", "v1",
             params=None, json_body=body, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     def bulk_external_ids(self, body: Any, *, fortnite_token: str | None = None) -> Any:
-        """Bulk lookup accounts by external platform IDs."""
+        """Bulk lookup accounts by external platform IDs.
+
+        ``POST /api/v1/account/external/ids/bulk``
+        """
         return self._t.request("POST", "/account/external/ids/bulk", "v1",
             params=None, json_body=body, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     def get_by_external_display_name(self, external_auth_type: str, display_name: str, *, case_insensitive: bool | None = None, fortnite_token: str | None = None) -> Any:
-        """Get account by display name from an external auth provider (e.g. psn, xbl, nintendo)."""
+        """Get account by display name from an external auth provider (e.g. psn, xbl, nintendo).
+
+        ``GET /api/v1/account/external/{externalAuthType}/displayName/{displayName}``
+        """
         return self._t.request("GET", f"/account/external/{external_auth_type}/displayName/{display_name}", "v1",
             params={"caseInsensitive": case_insensitive}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     def get_epic_id_sdk(self, account_ids: list[str], *, fortnite_token: str | None = None) -> Any:
-        """Epic ID SDK v2 account lookup — returns extended account info via the Developer Portal API."""
+        """Epic ID SDK v2 account lookup — returns extended account info via the Developer Portal API. Accepts
+        one or more comma-separated Epic account IDs.
+
+        ``GET /api/v1/account/sdk``
+        """
         return self._t.request("GET", "/account/sdk", "v1",
-            params={"accountId": ",".join(account_ids)}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            params={"accountId": ",".join(account_ids) if account_ids is not None else None}, json_body=None, fortnite_token=fortnite_token,
+            response_type=None)
 
     def get_external_auths(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Get all external auth connections for an account."""
+        """Get all external auth connections for an account.
+
+        ``GET /api/v1/account/{accountId}/externalAuths``
+        """
         return self._t.request("GET", f"/account/{account_id}/externalAuths", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     def get_external_auth(self, account_id: str, auth_type: str, *, fortnite_token: str | None = None) -> Any:
-        """Get a specific external auth connection for an account."""
+        """Get a specific external auth connection for an account.
+
+        ``GET /api/v1/account/{accountId}/externalAuths/{authType}``
+        """
         return self._t.request("GET", f"/account/{account_id}/externalAuths/{auth_type}", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
 
 class AsyncAccountResource(Resource):
     async def get_by_id(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Get account information by Epic account ID."""
+        """Get account information by Epic account ID.
+
+        ``GET /api/v1/account/{accountId}``
+        """
         return await self._t.request("GET", f"/account/{account_id}", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     async def get_bulk(self, account_ids: list[str], *, fortnite_token: str | None = None) -> Any:
-        """Get multiple accounts by Epic account IDs in a single request."""
+        """Get multiple accounts by Epic account IDs in a single request.
+
+        ``GET /api/v1/account/bulk``
+        """
         return await self._t.request("GET", "/account/bulk", "v1",
             params={"accountId": account_ids}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     async def get_by_display_name(self, display_name: str, *, fortnite_token: str | None = None) -> Any:
-        """Get account information by Epic display name."""
+        """Get account information by Epic display name.
+
+        ``GET /api/v1/account/displayName/{displayName}``
+        """
         return await self._t.request("GET", f"/account/displayName/{display_name}", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     async def get_display_names(self, account_ids: list[str], *, fortnite_token: str | None = None) -> Any:
-        """Resolve one or more Epic account IDs to their display names."""
+        """Resolve one or more Epic account IDs to their display names.
+
+        ``GET /api/v1/account/displaynames``
+        """
         return await self._t.request("GET", "/account/displaynames", "v1",
-            params={"ids": ",".join(account_ids)}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            params={"ids": ",".join(account_ids) if account_ids is not None else None}, json_body=None, fortnite_token=fortnite_token,
+            response_type=None)
 
     async def bulk_external_display_names(self, body: Any, *, fortnite_token: str | None = None) -> Any:
-        """Bulk lookup accounts by external display names."""
+        """Bulk lookup accounts by external display names.
+
+        ``POST /api/v1/account/external/displayNames/bulk``
+        """
         return await self._t.request("POST", "/account/external/displayNames/bulk", "v1",
             params=None, json_body=body, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     async def bulk_external_ids(self, body: Any, *, fortnite_token: str | None = None) -> Any:
-        """Bulk lookup accounts by external platform IDs."""
+        """Bulk lookup accounts by external platform IDs.
+
+        ``POST /api/v1/account/external/ids/bulk``
+        """
         return await self._t.request("POST", "/account/external/ids/bulk", "v1",
             params=None, json_body=body, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     async def get_by_external_display_name(self, external_auth_type: str, display_name: str, *, case_insensitive: bool | None = None, fortnite_token: str | None = None) -> Any:
-        """Get account by display name from an external auth provider (e.g. psn, xbl, nintendo)."""
+        """Get account by display name from an external auth provider (e.g. psn, xbl, nintendo).
+
+        ``GET /api/v1/account/external/{externalAuthType}/displayName/{displayName}``
+        """
         return await self._t.request("GET", f"/account/external/{external_auth_type}/displayName/{display_name}", "v1",
             params={"caseInsensitive": case_insensitive}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     async def get_epic_id_sdk(self, account_ids: list[str], *, fortnite_token: str | None = None) -> Any:
-        """Epic ID SDK v2 account lookup — returns extended account info via the Developer Portal API."""
+        """Epic ID SDK v2 account lookup — returns extended account info via the Developer Portal API. Accepts
+        one or more comma-separated Epic account IDs.
+
+        ``GET /api/v1/account/sdk``
+        """
         return await self._t.request("GET", "/account/sdk", "v1",
-            params={"accountId": ",".join(account_ids)}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            params={"accountId": ",".join(account_ids) if account_ids is not None else None}, json_body=None, fortnite_token=fortnite_token,
+            response_type=None)
 
     async def get_external_auths(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
-        """Get all external auth connections for an account."""
+        """Get all external auth connections for an account.
+
+        ``GET /api/v1/account/{accountId}/externalAuths``
+        """
         return await self._t.request("GET", f"/account/{account_id}/externalAuths", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)
 
     async def get_external_auth(self, account_id: str, auth_type: str, *, fortnite_token: str | None = None) -> Any:
-        """Get a specific external auth connection for an account."""
+        """Get a specific external auth connection for an account.
+
+        ``GET /api/v1/account/{accountId}/externalAuths/{authType}``
+        """
         return await self._t.request("GET", f"/account/{account_id}/externalAuths/{auth_type}", "v1",
             params=None, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=None)

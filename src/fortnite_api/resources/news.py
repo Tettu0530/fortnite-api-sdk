@@ -1,56 +1,115 @@
 from __future__ import annotations
 
-from typing import Any
-
+from ..models import AllNews, NewsFeed, NewsNotice
 from ._base import Resource
 
 class NewsResource(Resource):
-    def get_all(self, *, lang: str | None = None, fortnite_token: str | None = None) -> Any:
-        """Get all in-game news across all modes."""
+    def get_all(self, *, lang: str | None = None, platform: str | None = None, fortnite_token: str | None = None) -> AllNews:
+        """Current lobby news for every mode, plus the emergency notices.
+
+        ``GET /api/v1/news``
+        """
         return self._t.request("GET", "/news", "v1",
-            params={"lang": lang}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            params={"lang": lang, "platform": platform}, json_body=None, fortnite_token=fortnite_token,
+            response_type=AllNews)
 
-    def get_br(self, *, lang: str | None = None, fortnite_token: str | None = None) -> Any:
-        """Get Battle Royale news."""
+    def get_br(self, *, lang: str | None = None, platform: str | None = None, fortnite_token: str | None = None) -> NewsFeed:
+        """Current Battle Royale lobby news.
+
+        ``GET /api/v1/news/br``
+        """
         return self._t.request("GET", "/news/br", "v1",
-            params={"lang": lang}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            params={"lang": lang, "platform": platform}, json_body=None, fortnite_token=fortnite_token,
+            response_type=NewsFeed)
 
-    def get_creative(self, *, lang: str | None = None, fortnite_token: str | None = None) -> Any:
-        """Get Creative mode news."""
+    def get_creative(self, *, lang: str | None = None, platform: str | None = None, fortnite_token: str | None = None) -> NewsFeed:
+        """Current lobby news Epic serves for Creative.
+
+        ``GET /api/v1/news/creative``
+        """
         return self._t.request("GET", "/news/creative", "v1",
-            params={"lang": lang}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            params={"lang": lang, "platform": platform}, json_body=None, fortnite_token=fortnite_token,
+            response_type=NewsFeed)
 
-    def get_stw(self, *, lang: str | None = None, fortnite_token: str | None = None) -> Any:
-        """Get Save the World news."""
-        return self._t.request("GET", "/news/stw", "v1",
+    def get_festival(self, *, lang: str | None = None, platform: str | None = None, fortnite_token: str | None = None) -> NewsFeed:
+        """Current Fortnite Festival lobby news.
+
+        ``GET /api/v1/news/festival``
+        """
+        return self._t.request("GET", "/news/festival", "v1",
+            params={"lang": lang, "platform": platform}, json_body=None, fortnite_token=fortnite_token,
+            response_type=NewsFeed)
+
+    def get_notices(self, *, lang: str | None = None, fortnite_token: str | None = None) -> list[NewsNotice]:
+        """Current emergency notices (the in-game warning banners), e.g. a mode leaving or a feature disabled.
+
+        ``GET /api/v1/news/notices``
+        """
+        return self._t.request("GET", "/news/notices", "v1",
             params={"lang": lang}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=list[NewsNotice])
+
+    def get_stw(self, *, lang: str | None = None, platform: str | None = None, fortnite_token: str | None = None) -> NewsFeed:
+        """Current lobby news Epic serves for Save the World.
+
+        ``GET /api/v1/news/stw``
+        """
+        return self._t.request("GET", "/news/stw", "v1",
+            params={"lang": lang, "platform": platform}, json_body=None, fortnite_token=fortnite_token,
+            response_type=NewsFeed)
 
 
 class AsyncNewsResource(Resource):
-    async def get_all(self, *, lang: str | None = None, fortnite_token: str | None = None) -> Any:
-        """Get all in-game news across all modes."""
+    async def get_all(self, *, lang: str | None = None, platform: str | None = None, fortnite_token: str | None = None) -> AllNews:
+        """Current lobby news for every mode, plus the emergency notices.
+
+        ``GET /api/v1/news``
+        """
         return await self._t.request("GET", "/news", "v1",
-            params={"lang": lang}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            params={"lang": lang, "platform": platform}, json_body=None, fortnite_token=fortnite_token,
+            response_type=AllNews)
 
-    async def get_br(self, *, lang: str | None = None, fortnite_token: str | None = None) -> Any:
-        """Get Battle Royale news."""
+    async def get_br(self, *, lang: str | None = None, platform: str | None = None, fortnite_token: str | None = None) -> NewsFeed:
+        """Current Battle Royale lobby news.
+
+        ``GET /api/v1/news/br``
+        """
         return await self._t.request("GET", "/news/br", "v1",
-            params={"lang": lang}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            params={"lang": lang, "platform": platform}, json_body=None, fortnite_token=fortnite_token,
+            response_type=NewsFeed)
 
-    async def get_creative(self, *, lang: str | None = None, fortnite_token: str | None = None) -> Any:
-        """Get Creative mode news."""
+    async def get_creative(self, *, lang: str | None = None, platform: str | None = None, fortnite_token: str | None = None) -> NewsFeed:
+        """Current lobby news Epic serves for Creative.
+
+        ``GET /api/v1/news/creative``
+        """
         return await self._t.request("GET", "/news/creative", "v1",
-            params={"lang": lang}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            params={"lang": lang, "platform": platform}, json_body=None, fortnite_token=fortnite_token,
+            response_type=NewsFeed)
 
-    async def get_stw(self, *, lang: str | None = None, fortnite_token: str | None = None) -> Any:
-        """Get Save the World news."""
-        return await self._t.request("GET", "/news/stw", "v1",
+    async def get_festival(self, *, lang: str | None = None, platform: str | None = None, fortnite_token: str | None = None) -> NewsFeed:
+        """Current Fortnite Festival lobby news.
+
+        ``GET /api/v1/news/festival``
+        """
+        return await self._t.request("GET", "/news/festival", "v1",
+            params={"lang": lang, "platform": platform}, json_body=None, fortnite_token=fortnite_token,
+            response_type=NewsFeed)
+
+    async def get_notices(self, *, lang: str | None = None, fortnite_token: str | None = None) -> list[NewsNotice]:
+        """Current emergency notices (the in-game warning banners), e.g. a mode leaving or a feature disabled.
+
+        ``GET /api/v1/news/notices``
+        """
+        return await self._t.request("GET", "/news/notices", "v1",
             params={"lang": lang}, json_body=None, fortnite_token=fortnite_token,
-            model=None, is_list=False)
+            response_type=list[NewsNotice])
+
+    async def get_stw(self, *, lang: str | None = None, platform: str | None = None, fortnite_token: str | None = None) -> NewsFeed:
+        """Current lobby news Epic serves for Save the World.
+
+        ``GET /api/v1/news/stw``
+        """
+        return await self._t.request("GET", "/news/stw", "v1",
+            params={"lang": lang, "platform": platform}, json_body=None, fortnite_token=fortnite_token,
+            response_type=NewsFeed)

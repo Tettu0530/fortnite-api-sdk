@@ -4,44 +4,76 @@ from ..models import CosmeticDto, CosmeticDtoPaginatedResultDto
 from ._base import Resource
 
 class CosmeticsResource(Resource):
-    def get_all(self, *, page: int | None = None, page_size: int | None = None, type: str | None = None, rarity: str | None = None, set: str | None = None, search: str | None = None, season: str | None = None, chapter: str | None = None, lang: str | None = None, fortnite_token: str | None = None) -> CosmeticDtoPaginatedResultDto:
+    def get_all(self, *, page: int | None = None, page_size: int | None = None, type: str | None = None, rarity: str | None = None, set: str | None = None, search: str | None = None, season: int | None = None, chapter: int | None = None, lang: str | None = None, fortnite_token: str | None = None) -> CosmeticDtoPaginatedResultDto:
+        """GET /api/v2/cosmetics/all
+
+        ``GET /api/v2/cosmetics/all``
+        """
         return self._t.request("GET", "/cosmetics/all", "v2",
             params={"page": page, "pageSize": page_size, "type": type, "rarity": rarity, "set": set, "search": search, "season": season, "chapter": chapter, "lang": lang}, json_body=None, fortnite_token=fortnite_token,
-            model=CosmeticDtoPaginatedResultDto, is_list=False)
+            response_type=CosmeticDtoPaginatedResultDto)
 
     def get_new(self, *, page: int | None = None, page_size: int | None = None, lang: str | None = None, fortnite_token: str | None = None) -> CosmeticDtoPaginatedResultDto:
+        """GET /api/v2/cosmetics/new
+
+        ``GET /api/v2/cosmetics/new``
+        """
         return self._t.request("GET", "/cosmetics/new", "v2",
             params={"page": page, "pageSize": page_size, "lang": lang}, json_body=None, fortnite_token=fortnite_token,
-            model=CosmeticDtoPaginatedResultDto, is_list=False)
+            response_type=CosmeticDtoPaginatedResultDto)
 
     def search(self, q: str, *, page: int | None = None, page_size: int | None = None, type: str | None = None, rarity: str | None = None, set: str | None = None, lang: str | None = None, fortnite_token: str | None = None) -> CosmeticDtoPaginatedResultDto:
+        """GET /api/v2/cosmetics/search
+
+        ``GET /api/v2/cosmetics/search``
+        """
         return self._t.request("GET", "/cosmetics/search", "v2",
             params={"q": q, "page": page, "pageSize": page_size, "type": type, "rarity": rarity, "set": set, "lang": lang}, json_body=None, fortnite_token=fortnite_token,
-            model=CosmeticDtoPaginatedResultDto, is_list=False)
+            response_type=CosmeticDtoPaginatedResultDto)
 
     def get_by_id(self, id: str, *, lang: str | None = None, fortnite_token: str | None = None) -> CosmeticDto:
+        """GET /api/v2/cosmetics/{id}
+
+        ``GET /api/v2/cosmetics/{id}``
+        """
         return self._t.request("GET", f"/cosmetics/{id}", "v2",
             params={"lang": lang}, json_body=None, fortnite_token=fortnite_token,
-            model=CosmeticDto, is_list=False)
+            response_type=CosmeticDto)
 
 
 class AsyncCosmeticsResource(Resource):
-    async def get_all(self, *, page: int | None = None, page_size: int | None = None, type: str | None = None, rarity: str | None = None, set: str | None = None, search: str | None = None, season: str | None = None, chapter: str | None = None, lang: str | None = None, fortnite_token: str | None = None) -> CosmeticDtoPaginatedResultDto:
+    async def get_all(self, *, page: int | None = None, page_size: int | None = None, type: str | None = None, rarity: str | None = None, set: str | None = None, search: str | None = None, season: int | None = None, chapter: int | None = None, lang: str | None = None, fortnite_token: str | None = None) -> CosmeticDtoPaginatedResultDto:
+        """GET /api/v2/cosmetics/all
+
+        ``GET /api/v2/cosmetics/all``
+        """
         return await self._t.request("GET", "/cosmetics/all", "v2",
             params={"page": page, "pageSize": page_size, "type": type, "rarity": rarity, "set": set, "search": search, "season": season, "chapter": chapter, "lang": lang}, json_body=None, fortnite_token=fortnite_token,
-            model=CosmeticDtoPaginatedResultDto, is_list=False)
+            response_type=CosmeticDtoPaginatedResultDto)
 
     async def get_new(self, *, page: int | None = None, page_size: int | None = None, lang: str | None = None, fortnite_token: str | None = None) -> CosmeticDtoPaginatedResultDto:
+        """GET /api/v2/cosmetics/new
+
+        ``GET /api/v2/cosmetics/new``
+        """
         return await self._t.request("GET", "/cosmetics/new", "v2",
             params={"page": page, "pageSize": page_size, "lang": lang}, json_body=None, fortnite_token=fortnite_token,
-            model=CosmeticDtoPaginatedResultDto, is_list=False)
+            response_type=CosmeticDtoPaginatedResultDto)
 
     async def search(self, q: str, *, page: int | None = None, page_size: int | None = None, type: str | None = None, rarity: str | None = None, set: str | None = None, lang: str | None = None, fortnite_token: str | None = None) -> CosmeticDtoPaginatedResultDto:
+        """GET /api/v2/cosmetics/search
+
+        ``GET /api/v2/cosmetics/search``
+        """
         return await self._t.request("GET", "/cosmetics/search", "v2",
             params={"q": q, "page": page, "pageSize": page_size, "type": type, "rarity": rarity, "set": set, "lang": lang}, json_body=None, fortnite_token=fortnite_token,
-            model=CosmeticDtoPaginatedResultDto, is_list=False)
+            response_type=CosmeticDtoPaginatedResultDto)
 
     async def get_by_id(self, id: str, *, lang: str | None = None, fortnite_token: str | None = None) -> CosmeticDto:
+        """GET /api/v2/cosmetics/{id}
+
+        ``GET /api/v2/cosmetics/{id}``
+        """
         return await self._t.request("GET", f"/cosmetics/{id}", "v2",
             params={"lang": lang}, json_body=None, fortnite_token=fortnite_token,
-            model=CosmeticDto, is_list=False)
+            response_type=CosmeticDto)
