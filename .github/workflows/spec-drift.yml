@@ -1,0 +1,112 @@
+name: Spec drift
+
+# Compares the live OpenAPI spec with openapi/swagger.json and tracks drift in a single issue.
+on:
+  schedule:
+    - cron: "41 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spec-drift
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      status: ${{ steps.drift.outputs.status }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: Compare live spec with openapi/swagger.json
+        id: drift
+        run: |
+          set +e
+          uv run python scripts/check_spec_drift.py > drift-summary.txt 2>&1
+          code=$?
+          set -e
+          # The summary contains names from the remote spec; never let the runner parse them as
+          # workflow commands (check_spec_drift.py also escapes control characters and backticks).
+          stop_token="$(uuidgen)"
+          echo "::stop-commands::${stop_token}"
+          cat drift-summary.txt
+          echo "::${stop_token}::"
+          case "$code" in
+            0) echo "status=clean" >> "$GITHUB_OUTPUT" ;;
+            1) echo "status=drift" >> "$GITHUB_OUTPUT"
+               { echo "## API spec drift detected"; echo; echo '````text'; cat drift-summary.txt; echo '````'; } >> "$GITHUB_STEP_SUMMARY" ;;
+            2) echo "::error::Could not download the live spec (network error)."; exit 1 ;;
+            *) echo "::error::check_spec_drift.py exited with unexpected code $code"; exit 1 ;;
+          esac
+
+      - name: Upload summary
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: drift-summary
+          path: drift-summary.txt
+          retention-days: 7
+
+  report:
+    name: report
+    needs: check
+    if: needs.check.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write # open, update or close the spec-drift issue
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: drift-summary
+
+      - name: Open, update or close the spec-drift issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          STATUS: ${{ needs.check.outputs.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          existing="$(gh issue list --label spec-drift --state open --limit 1 --json number --jq '.[0].number // empty')"
+          if [ "$STATUS" = "clean" ]; then
+            if [ -n "$existing" ]; then
+              gh issue close "$existing" --comment "The live API spec matches \`openapi/swagger.json\` again ($RUN_URL)."
+            fi
+            exit 0
+          fi
+          {
+            echo "The live API spec at \`https://prod.api-fortnite.com/swagger/v1/swagger.json\` differs from \`openapi/swagger.json\`."
+            echo
+            echo "Please update the spec, run \`uv run python scripts/generate.py\`, and open a pull request."
+            echo
+            echo "Last checked: $RUN_URL"
+            echo
+            # Fence longer than any backtick run the (sanitized) summary can contain.
+            echo '````text'
+            head -c 60000 drift-summary.txt | tr -d '`'
+            echo
+            echo '````'
+          } > issue-body.md
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --body-file issue-body.md
+            gh issue comment "$existing" --body "Drift still present; the summary above was refreshed ($RUN_URL)."
+          else
+            gh label create spec-drift --color D93F0B --description "Live API spec differs from openapi/swagger.json" --force
+            gh issue create --title "API spec drift detected" --label spec-drift --body-file issue-body.md
+          fi

@@ -1,6 +1,6 @@
 [project]
 name = "fortnite-api-sdk"
-version = "0.1.1"
+version = "0.2.0"
 description = "Python SDK (sync + async) for the Fortnite API at api-fortnite.com"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -17,15 +17,13 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Typing :: Typed",
 ]
 dependencies = [
     "httpx>=0.27",
     "pydantic>=2.7",
 ]
-
-[project.optional-dependencies]
-dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.5"]
 
 [project.urls]
 Homepage = "https://api-fortnite.com"
@@ -39,9 +37,117 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/fortnite_api"]
 
+[dependency-groups]
+dev = [
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6",
+    "ruff>=0.8",
+]
+# Release tooling, kept out of the dev environment. Locked in uv.lock so CI and the release
+# pipeline run a known twine version: `uv run --locked --only-group dist twine check ...`.
+dist = [
+    "twine>=6",
+]
+
 [tool.pytest.ini_options]
+minversion = "8.0"
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "live: hits the real api-fortnite.com API (needs FN_API_KEY); deselected by default, run with `pytest -m live`",
+]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "-m",
+    "not live",
+    "--cov=fortnite_api",
+    "--cov-branch",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+]
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+source = ["fortnite_api"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+skip_covered = false
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "@overload",
+    "raise NotImplementedError",
+]
 
 [tool.ruff]
 line-length = 120
+target-version = "py310"
+extend-exclude = [".venv"]
+
+[tool.ruff.format]
+# Markdown code blocks (README, docs) keep their hand-aligned comments.
+exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort
+    "B",     # flake8-bugbear
+    "UP",    # pyupgrade
+    "SIM",   # flake8-simplify
+    "RUF",   # ruff-specific
+    "ASYNC", # flake8-async
+    "PT",    # flake8-pytest-style
+    "C4",    # flake8-comprehensions
+    "PIE",   # flake8-pie
+    "PL",    # pylint
+    "T20",   # flake8-print
+]
+ignore = [
+    "PLR0911", # too many return statements
+    "PLR0912", # too many branches
+    "PLR0913", # too many arguments (API methods mirror the spec's parameters)
+    "PLR0915", # too many statements
+    "PLR2004", # magic values in comparisons
+]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["T20"]
+"examples/*" = ["T20"]
+# Generated method signatures mirror the spec's path parameters.
+"src/fortnite_api/resources/*" = ["PLR0917"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["fortnite_api"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["src/fortnite_api", "tests", "scripts"]
+mypy_path = ["src", "."]
+explicit_package_bases = true
+plugins = ["pydantic.mypy"]
+strict = true
+warn_unreachable = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*", "scripts.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+check_untyped_defs = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = false
+init_typed = false
+warn_required_dynamic_aliases = true

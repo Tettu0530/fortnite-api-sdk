@@ -1,0 +1,62 @@
+name: Live API tests
+
+# Runs tests/test_live.py against the real API. Not a required check.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  live:
+    name: live
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The secrets live in the "live" environment, which may only be used from the main branch,
+    # so other branches cannot read them.
+    environment: live
+    steps:
+      - name: Check whether FN_API_KEY is configured
+        id: check
+        env:
+          FN_API_KEY: ${{ secrets.FN_API_KEY }}
+        run: |
+          if [ -n "$FN_API_KEY" ]; then
+            echo "has-key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-key=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::FN_API_KEY is not configured in the live environment; live tests are skipped."
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.check.outputs.has-key == 'true'
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        if: steps.check.outputs.has-key == 'true'
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Sync dependencies
+        if: steps.check.outputs.has-key == 'true'
+        run: uv sync --locked --all-extras --dev
+
+      - name: Live tests
+        if: steps.check.outputs.has-key == 'true'
+        env:
+          FN_API_KEY: ${{ secrets.FN_API_KEY }}
+          # Optional: enable the user-token tests. Tokens expire, so refresh these when they do.
+          FN_FORTNITE_TOKEN: ${{ secrets.FN_FORTNITE_TOKEN }}
+          FN_ACCOUNT_ID: ${{ secrets.FN_ACCOUNT_ID }}
+        run: uv run pytest -m live
