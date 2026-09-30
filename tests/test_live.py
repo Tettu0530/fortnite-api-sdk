@@ -7,11 +7,14 @@ These tests are marked ``live`` and are deselected by default. Run them with::
 Endpoints that need a user token additionally require ``FN_FORTNITE_TOKEN`` (and
 ``FN_ACCOUNT_ID`` for the account the token belongs to). The assertions check types and
 shapes only, never exact values, so that normal data changes do not break the suite.
+Endpoints that the API key's plan does not include (HTTP 403) are reported as skipped, not failed
+(see ``tests/conftest.py``).
 """
 
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
@@ -47,7 +50,6 @@ from fortnite_api.models import (
 API_KEY = os.environ.get("FN_API_KEY", "")
 FORTNITE_TOKEN = os.environ.get("FN_FORTNITE_TOKEN", "")
 ACCOUNT_ID = os.environ.get("FN_ACCOUNT_ID", "")
-NINJA_ACCOUNT_ID = "4735ce9132924caf8a5b17789b40f79c"
 
 pytestmark = [
     pytest.mark.live,
@@ -262,7 +264,10 @@ def test_power_rankings_search(client: FortniteAPI) -> None:
 def test_account_lookup_by_display_name(client: FortniteAPI) -> None:
     account = client.account.get_by_display_name("Ninja")
     assert account
-    assert _account_id(account) == NINJA_ACCOUNT_ID
+    # Display names can move between accounts, so only the shape of the ID is checked.
+    account_id = _account_id(account)
+    assert account_id is not None
+    assert re.fullmatch(r"[0-9a-f]{32}", account_id)
 
 
 # --- async ---------------------------------------------------------------------------------

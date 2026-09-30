@@ -96,7 +96,7 @@ class CashPrizePayoutDto(FNModel):
 
 
 class CashPrizeRankDto(FNModel):
-    threshold: int | None = None
+    threshold: float | None = None
     payouts: list[CashPrizePayoutDto] | None = None
 
 
@@ -210,7 +210,7 @@ class EpicEventDto(FNModel):
     platform_mappings: dict[str, str] | None = Field(default=None, alias="platformMappings")
     metadata: EpicEventMetadataDto | None = None
     event_windows: list[EpicEventWindowDto] | None = Field(default=None, alias="eventWindows")
-    link: str | None = None
+    link: str | dict[str, Any] | None = None
 
 
 class EpicEventMetadataDto(FNModel):

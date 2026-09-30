@@ -39,6 +39,15 @@ def snake(name: str) -> str:
 
 PY_PRIMITIVE = {"string": "str", "integer": "int", "number": "float", "boolean": "bool"}
 
+# Fields whose live responses do not match the spec, verified against the production API.
+# (schema, property) -> Python annotation used instead of the spec type (``| None`` is added).
+FIELD_OVERRIDES: dict[tuple[str, str], str] = {
+    # Spec: string. Live: an object such as {"type": "br:tournament", "code": "..."}.
+    ("EpicEventDto", "link"): "str | dict[str, Any]",
+    # Spec: int32. Live: fractional thresholds also occur.
+    ("CashPrizeRankDto", "threshold"): "float",
+}
+
 
 def model_type(schema: dict[str, Any]) -> str:
     if "$ref" in schema:
@@ -75,6 +84,9 @@ def gen_models() -> str:
         "",
     ]
     names = list(schemas)
+    for schema_name, prop_name in FIELD_OVERRIDES:
+        if prop_name not in (schemas.get(schema_name, {}).get("properties") or {}):
+            raise SystemExit(f"FIELD_OVERRIDES: {schema_name}.{prop_name} is not in the spec")
     for name in names:
         schema = schemas[name]
         props = schema.get("properties") or {}
@@ -85,7 +97,7 @@ def gen_models() -> str:
             continue
         for prop, pschema in props.items():
             py = snake(prop)
-            ann = f"{model_type(pschema)} | None"
+            ann = f"{FIELD_OVERRIDES.get((name, prop)) or model_type(pschema)} | None"
             if py != prop:
                 lines.append(f'    {py}: {ann} = Field(default=None, alias="{prop}")')
             else:
