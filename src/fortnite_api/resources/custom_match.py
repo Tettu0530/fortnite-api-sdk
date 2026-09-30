@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..interpret import path_segment
 from ..models import InitiateRequest, RegisterAccountRequest
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class CustomMatchResource(Resource[SyncTransport]):
+class CustomMatchResource(Resource[SyncTransportProtocol]):
     def initiate(self, body: InitiateRequest | dict[str, Any], *, fortnite_token: str | None = None) -> Any:
         """Queue a custom key push for a list of players.
 
@@ -32,12 +33,13 @@ class CustomMatchResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/custom-match/status/{player_id}",
+            f"/custom-match/status/{path_segment(player_id)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_bots(self, *, fortnite_token: str | None = None) -> Any:
@@ -54,6 +56,7 @@ class CustomMatchResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def register_account(
@@ -81,7 +84,7 @@ class CustomMatchResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "DELETE",
-            f"/custom-match/accounts/{id}",
+            f"/custom-match/accounts/{path_segment(id)}",
             "v1",
             params=None,
             json_body=None,
@@ -90,7 +93,7 @@ class CustomMatchResource(Resource[SyncTransport]):
         )
 
 
-class AsyncCustomMatchResource(Resource[AsyncTransport]):
+class AsyncCustomMatchResource(Resource[AsyncTransportProtocol]):
     async def initiate(self, body: InitiateRequest | dict[str, Any], *, fortnite_token: str | None = None) -> Any:
         """Queue a custom key push for a list of players.
 
@@ -113,12 +116,13 @@ class AsyncCustomMatchResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/custom-match/status/{player_id}",
+            f"/custom-match/status/{path_segment(player_id)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_bots(self, *, fortnite_token: str | None = None) -> Any:
@@ -135,6 +139,7 @@ class AsyncCustomMatchResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def register_account(
@@ -162,7 +167,7 @@ class AsyncCustomMatchResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "DELETE",
-            f"/custom-match/accounts/{id}",
+            f"/custom-match/accounts/{path_segment(id)}",
             "v1",
             params=None,
             json_body=None,

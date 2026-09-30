@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from .._transport import AsyncTransport, SyncTransport
 from ..models import ShopResponseDto
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class ShopResource(Resource[SyncTransport]):
+class ShopResource(Resource[SyncTransportProtocol]):
     def get_current(
         self,
         *,
@@ -30,10 +30,11 @@ class ShopResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=ShopResponseDto,
+            retryable=True,
         )
 
 
-class AsyncShopResource(Resource[AsyncTransport]):
+class AsyncShopResource(Resource[AsyncTransportProtocol]):
     async def get_current(
         self,
         *,
@@ -56,4 +57,5 @@ class AsyncShopResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=ShopResponseDto,
+            retryable=True,
         )

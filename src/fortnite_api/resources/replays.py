@@ -5,18 +5,19 @@ from __future__ import annotations
 import warnings
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..interpret import path_segment
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class ReplaysResource(Resource[SyncTransport]):
+class ReplaysResource(Resource[SyncTransportProtocol]):
     def download(self, match_id: str, *, fortnite_token: str | None = None) -> bytes:
         """Download a tournament .replay file by match ID. Returns the raw .replay binary (application/octet-
         stream). Match IDs come from Epic's tournament events API.
 
         ``GET /api/v1/replays/{matchId}``
         """
-        return self._t.request_binary(f"/replays/{match_id}", "v1", fortnite_token=fortnite_token)
+        return self._t.request_binary(f"/replays/{path_segment(match_id)}", "v1", fortnite_token=fortnite_token)
 
     def get_metadata(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
         """Get the raw chunk manifest (metadata) for a tournament replay. Returns Events, DataChunks,
@@ -26,12 +27,13 @@ class ReplaysResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/replays/{match_id}/metadata",
+            f"/replays/{path_segment(match_id)}/metadata",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def parse(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -48,7 +50,7 @@ class ReplaysResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/replays/{match_id}/parse",
+            f"/replays/{path_segment(match_id)}/parse",
             "v1",
             params=None,
             json_body=None,
@@ -77,7 +79,7 @@ class ReplaysResource(Resource[SyncTransport]):
         )
         return self._t.request(
             "GET",
-            f"/replays/{match_id}/parse/broadcast",
+            f"/replays/{path_segment(match_id)}/parse/broadcast",
             "v1",
             params=None,
             json_body=None,
@@ -94,7 +96,7 @@ class ReplaysResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/replays/{match_id}/parse/lobby",
+            f"/replays/{path_segment(match_id)}/parse/lobby",
             "v1",
             params=None,
             json_body=None,
@@ -117,7 +119,7 @@ class ReplaysResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/replays/{match_id}/parse/loot",
+            f"/replays/{path_segment(match_id)}/parse/loot",
             "v1",
             params=None,
             json_body=None,
@@ -133,7 +135,7 @@ class ReplaysResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/replays/{match_id}/parse/map",
+            f"/replays/{path_segment(match_id)}/parse/map",
             "v1",
             params=None,
             json_body=None,
@@ -150,7 +152,7 @@ class ReplaysResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/replays/{match_id}/parse/stats",
+            f"/replays/{path_segment(match_id)}/parse/stats",
             "v1",
             params=None,
             json_body=None,
@@ -167,7 +169,7 @@ class ReplaysResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/replays/{match_id}/parse/timeline",
+            f"/replays/{path_segment(match_id)}/parse/timeline",
             "v1",
             params=None,
             json_body=None,
@@ -188,7 +190,7 @@ class ReplaysResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/replays/{match_id}/parse/tracks",
+            f"/replays/{path_segment(match_id)}/parse/tracks",
             "v1",
             params=None,
             json_body=None,
@@ -204,7 +206,7 @@ class ReplaysResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/replays/{match_id}/parse/zones",
+            f"/replays/{path_segment(match_id)}/parse/zones",
             "v1",
             params=None,
             json_body=None,
@@ -213,14 +215,14 @@ class ReplaysResource(Resource[SyncTransport]):
         )
 
 
-class AsyncReplaysResource(Resource[AsyncTransport]):
+class AsyncReplaysResource(Resource[AsyncTransportProtocol]):
     async def download(self, match_id: str, *, fortnite_token: str | None = None) -> bytes:
         """Download a tournament .replay file by match ID. Returns the raw .replay binary (application/octet-
         stream). Match IDs come from Epic's tournament events API.
 
         ``GET /api/v1/replays/{matchId}``
         """
-        return await self._t.request_binary(f"/replays/{match_id}", "v1", fortnite_token=fortnite_token)
+        return await self._t.request_binary(f"/replays/{path_segment(match_id)}", "v1", fortnite_token=fortnite_token)
 
     async def get_metadata(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
         """Get the raw chunk manifest (metadata) for a tournament replay. Returns Events, DataChunks,
@@ -230,12 +232,13 @@ class AsyncReplaysResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/replays/{match_id}/metadata",
+            f"/replays/{path_segment(match_id)}/metadata",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def parse(self, match_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -252,7 +255,7 @@ class AsyncReplaysResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/replays/{match_id}/parse",
+            f"/replays/{path_segment(match_id)}/parse",
             "v1",
             params=None,
             json_body=None,
@@ -281,7 +284,7 @@ class AsyncReplaysResource(Resource[AsyncTransport]):
         )
         return await self._t.request(
             "GET",
-            f"/replays/{match_id}/parse/broadcast",
+            f"/replays/{path_segment(match_id)}/parse/broadcast",
             "v1",
             params=None,
             json_body=None,
@@ -298,7 +301,7 @@ class AsyncReplaysResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/replays/{match_id}/parse/lobby",
+            f"/replays/{path_segment(match_id)}/parse/lobby",
             "v1",
             params=None,
             json_body=None,
@@ -321,7 +324,7 @@ class AsyncReplaysResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/replays/{match_id}/parse/loot",
+            f"/replays/{path_segment(match_id)}/parse/loot",
             "v1",
             params=None,
             json_body=None,
@@ -337,7 +340,7 @@ class AsyncReplaysResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/replays/{match_id}/parse/map",
+            f"/replays/{path_segment(match_id)}/parse/map",
             "v1",
             params=None,
             json_body=None,
@@ -354,7 +357,7 @@ class AsyncReplaysResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/replays/{match_id}/parse/stats",
+            f"/replays/{path_segment(match_id)}/parse/stats",
             "v1",
             params=None,
             json_body=None,
@@ -371,7 +374,7 @@ class AsyncReplaysResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/replays/{match_id}/parse/timeline",
+            f"/replays/{path_segment(match_id)}/parse/timeline",
             "v1",
             params=None,
             json_body=None,
@@ -392,7 +395,7 @@ class AsyncReplaysResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/replays/{match_id}/parse/tracks",
+            f"/replays/{path_segment(match_id)}/parse/tracks",
             "v1",
             params=None,
             json_body=None,
@@ -408,7 +411,7 @@ class AsyncReplaysResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/replays/{match_id}/parse/zones",
+            f"/replays/{path_segment(match_id)}/parse/zones",
             "v1",
             params=None,
             json_body=None,

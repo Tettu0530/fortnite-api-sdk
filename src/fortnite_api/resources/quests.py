@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..interpret import path_segment
 from ..models import QuestDefinitionResult, QuestDefinitionsPage
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class QuestsResource(Resource[SyncTransport]):
+class QuestsResource(Resource[SyncTransportProtocol]):
     def get(self, account_id: str, *, resolve: bool | None = None, fortnite_token: str | None = None) -> Any:
         """Get active quests and challenges for a player. Requires x-fortnite-token.
 
@@ -17,12 +18,13 @@ class QuestsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/quests/{account_id}",
+            f"/quests/{path_segment(account_id)}",
             "v2",
             params={"resolve": resolve},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_definitions(
@@ -55,6 +57,7 @@ class QuestsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=QuestDefinitionsPage,
+            retryable=True,
         )
 
     def get_definition(self, template_id: str, *, fortnite_token: str | None = None) -> QuestDefinitionResult:
@@ -64,16 +67,17 @@ class QuestsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/quests/definitions/{template_id}",
+            f"/quests/definitions/{path_segment(template_id)}",
             "v2",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=QuestDefinitionResult,
+            retryable=True,
         )
 
 
-class AsyncQuestsResource(Resource[AsyncTransport]):
+class AsyncQuestsResource(Resource[AsyncTransportProtocol]):
     async def get(self, account_id: str, *, resolve: bool | None = None, fortnite_token: str | None = None) -> Any:
         """Get active quests and challenges for a player. Requires x-fortnite-token.
 
@@ -81,12 +85,13 @@ class AsyncQuestsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/quests/{account_id}",
+            f"/quests/{path_segment(account_id)}",
             "v2",
             params={"resolve": resolve},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_definitions(
@@ -119,6 +124,7 @@ class AsyncQuestsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=QuestDefinitionsPage,
+            retryable=True,
         )
 
     async def get_definition(self, template_id: str, *, fortnite_token: str | None = None) -> QuestDefinitionResult:
@@ -128,10 +134,11 @@ class AsyncQuestsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/quests/definitions/{template_id}",
+            f"/quests/definitions/{path_segment(template_id)}",
             "v2",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=QuestDefinitionResult,
+            retryable=True,
         )

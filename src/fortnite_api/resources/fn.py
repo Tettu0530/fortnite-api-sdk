@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..interpret import path_segment
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class FNResource(Resource[SyncTransport]):
+class FNResource(Resource[SyncTransportProtocol]):
     def get_br_inventory(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
         """Get the Battle Royale inventory for a player.
 
@@ -16,12 +17,13 @@ class FNResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/fn/br-inventory/{account_id}",
+            f"/fn/br-inventory/{path_segment(account_id)}",
             "v2",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_enabled_features(self, *, fortnite_token: str | None = None) -> Any:
@@ -37,6 +39,7 @@ class FNResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_entitlement(self, *, fortnite_token: str | None = None) -> Any:
@@ -52,6 +55,7 @@ class FNResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def request_entitlement(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -61,7 +65,7 @@ class FNResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "POST",
-            f"/fn/entitlement/{account_id}",
+            f"/fn/entitlement/{path_segment(account_id)}",
             "v2",
             params=None,
             json_body=None,
@@ -75,7 +79,14 @@ class FNResource(Resource[SyncTransport]):
         ``GET /api/v2/fn/keychain``
         """
         return self._t.request(
-            "GET", "/fn/keychain", "v2", params=None, json_body=None, fortnite_token=fortnite_token, response_type=None
+            "GET",
+            "/fn/keychain",
+            "v2",
+            params=None,
+            json_body=None,
+            fortnite_token=fortnite_token,
+            response_type=None,
+            retryable=True,
         )
 
     def get_privacy(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -85,12 +96,13 @@ class FNResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/fn/privacy/{account_id}",
+            f"/fn/privacy/{path_segment(account_id)}",
             "v2",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def update_privacy(self, account_id: str, body: Any, *, fortnite_token: str | None = None) -> Any:
@@ -100,7 +112,7 @@ class FNResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "POST",
-            f"/fn/privacy/{account_id}",
+            f"/fn/privacy/{path_segment(account_id)}",
             "v2",
             params=None,
             json_body=body,
@@ -115,12 +127,13 @@ class FNResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/fn/receipts/{account_id}",
+            f"/fn/receipts/{path_segment(account_id)}",
             "v2",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_version(self, platform: str, *, version: str | None = None, fortnite_token: str | None = None) -> Any:
@@ -130,16 +143,17 @@ class FNResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/fn/version/{platform}",
+            f"/fn/version/{path_segment(platform)}",
             "v2",
             params={"version": version},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
 
-class AsyncFNResource(Resource[AsyncTransport]):
+class AsyncFNResource(Resource[AsyncTransportProtocol]):
     async def get_br_inventory(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
         """Get the Battle Royale inventory for a player.
 
@@ -147,12 +161,13 @@ class AsyncFNResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/fn/br-inventory/{account_id}",
+            f"/fn/br-inventory/{path_segment(account_id)}",
             "v2",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_enabled_features(self, *, fortnite_token: str | None = None) -> Any:
@@ -168,6 +183,7 @@ class AsyncFNResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_entitlement(self, *, fortnite_token: str | None = None) -> Any:
@@ -183,6 +199,7 @@ class AsyncFNResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def request_entitlement(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -192,7 +209,7 @@ class AsyncFNResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "POST",
-            f"/fn/entitlement/{account_id}",
+            f"/fn/entitlement/{path_segment(account_id)}",
             "v2",
             params=None,
             json_body=None,
@@ -206,7 +223,14 @@ class AsyncFNResource(Resource[AsyncTransport]):
         ``GET /api/v2/fn/keychain``
         """
         return await self._t.request(
-            "GET", "/fn/keychain", "v2", params=None, json_body=None, fortnite_token=fortnite_token, response_type=None
+            "GET",
+            "/fn/keychain",
+            "v2",
+            params=None,
+            json_body=None,
+            fortnite_token=fortnite_token,
+            response_type=None,
+            retryable=True,
         )
 
     async def get_privacy(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -216,12 +240,13 @@ class AsyncFNResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/fn/privacy/{account_id}",
+            f"/fn/privacy/{path_segment(account_id)}",
             "v2",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def update_privacy(self, account_id: str, body: Any, *, fortnite_token: str | None = None) -> Any:
@@ -231,7 +256,7 @@ class AsyncFNResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "POST",
-            f"/fn/privacy/{account_id}",
+            f"/fn/privacy/{path_segment(account_id)}",
             "v2",
             params=None,
             json_body=body,
@@ -246,12 +271,13 @@ class AsyncFNResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/fn/receipts/{account_id}",
+            f"/fn/receipts/{path_segment(account_id)}",
             "v2",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_version(self, platform: str, *, version: str | None = None, fortnite_token: str | None = None) -> Any:
@@ -261,10 +287,11 @@ class AsyncFNResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/fn/version/{platform}",
+            f"/fn/version/{path_segment(platform)}",
             "v2",
             params={"version": version},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )

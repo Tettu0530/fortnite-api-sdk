@@ -68,7 +68,7 @@ its skills directory.
 
 ## Keeping the skill up to date
 
-The skill describes fortnite-api-sdk **0.2.0**. When you upgrade the SDK, please update your
+The skill describes fortnite-api-sdk **0.3.0**. When you upgrade the SDK, please update your
 installed copy of the skill as well (a symlink keeps it in sync with this repository
 automatically).
 

@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..interpret import path_segment
 from ..models import PowerRankingArchiveDto, PowerRankingSearchDto, PowerRankingsPageDto
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class PowerRankingsResource(Resource[SyncTransport]):
+class PowerRankingsResource(Resource[SyncTransportProtocol]):
     def get_leaderboard(
         self, *, page: int | None = None, account_id: str | None = None, fortnite_token: str | None = None
     ) -> PowerRankingsPageDto:
@@ -32,6 +33,7 @@ class PowerRankingsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=PowerRankingsPageDto,
+            retryable=True,
         )
 
     def get_player(self, identifier: str, *, fortnite_token: str | None = None) -> Any:
@@ -42,12 +44,13 @@ class PowerRankingsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/events/powerrankings/player/{identifier}",
+            f"/events/powerrankings/player/{path_segment(identifier)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def search(
@@ -67,6 +70,7 @@ class PowerRankingsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=PowerRankingSearchDto,
+            retryable=True,
         )
 
     def get_from_archive(self, account_id: str, *, fortnite_token: str | None = None) -> PowerRankingArchiveDto:
@@ -79,16 +83,17 @@ class PowerRankingsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/events/powerrankings/archive/{account_id}",
+            f"/events/powerrankings/archive/{path_segment(account_id)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=PowerRankingArchiveDto,
+            retryable=True,
         )
 
 
-class AsyncPowerRankingsResource(Resource[AsyncTransport]):
+class AsyncPowerRankingsResource(Resource[AsyncTransportProtocol]):
     async def get_leaderboard(
         self, *, page: int | None = None, account_id: str | None = None, fortnite_token: str | None = None
     ) -> PowerRankingsPageDto:
@@ -111,6 +116,7 @@ class AsyncPowerRankingsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=PowerRankingsPageDto,
+            retryable=True,
         )
 
     async def get_player(self, identifier: str, *, fortnite_token: str | None = None) -> Any:
@@ -121,12 +127,13 @@ class AsyncPowerRankingsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/events/powerrankings/player/{identifier}",
+            f"/events/powerrankings/player/{path_segment(identifier)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def search(
@@ -146,6 +153,7 @@ class AsyncPowerRankingsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=PowerRankingSearchDto,
+            retryable=True,
         )
 
     async def get_from_archive(self, account_id: str, *, fortnite_token: str | None = None) -> PowerRankingArchiveDto:
@@ -158,10 +166,11 @@ class AsyncPowerRankingsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/events/powerrankings/archive/{account_id}",
+            f"/events/powerrankings/archive/{path_segment(account_id)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=PowerRankingArchiveDto,
+            retryable=True,
         )

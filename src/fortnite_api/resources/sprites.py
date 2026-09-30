@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..interpret import path_segment
 from ..models import (
     AllSpriteCollectionsResponseDto,
     AllSpritesResponseDto,
@@ -17,10 +17,11 @@ from ..models import (
     SpritesResponseDto,
     SpriteVersionDto,
 )
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class SpritesResource(Resource[SyncTransport]):
+class SpritesResource(Resource[SyncTransportProtocol]):
     def get(
         self,
         *,
@@ -44,6 +45,7 @@ class SpritesResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=SpritesResponseDto,
+            retryable=True,
         )
 
     def get_all(
@@ -67,6 +69,7 @@ class SpritesResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=AllSpritesResponseDto,
+            retryable=True,
         )
 
     def get_versions(self, *, fortnite_token: str | None = None) -> list[SpriteVersionDto]:
@@ -82,6 +85,7 @@ class SpritesResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[SpriteVersionDto],
+            retryable=True,
         )
 
     def get_boons(self, *, fortnite_token: str | None = None) -> list[SpriteBoonDto]:
@@ -97,6 +101,7 @@ class SpritesResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[SpriteBoonDto],
+            retryable=True,
         )
 
     def get_by_id(self, id: str, *, fortnite_token: str | None = None) -> SpriteFamilyDto:
@@ -106,12 +111,13 @@ class SpritesResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/sprites/{id}",
+            f"/sprites/{path_segment(id)}",
             "v2",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=SpriteFamilyDto,
+            retryable=True,
         )
 
     def get_collection(
@@ -131,6 +137,7 @@ class SpritesResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=SpriteCollectionResponseDto,
+            retryable=True,
         )
 
     def get_all_collections(
@@ -149,6 +156,7 @@ class SpritesResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=AllSpriteCollectionsResponseDto,
+            retryable=True,
         )
 
     def publish_collection(
@@ -197,16 +205,17 @@ class SpritesResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/sprites/collection/shared/{account_id_or_name}",
+            f"/sprites/collection/shared/{path_segment(account_id_or_name)}",
             "v2",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=SharedSpriteCollectionDto,
+            retryable=True,
         )
 
 
-class AsyncSpritesResource(Resource[AsyncTransport]):
+class AsyncSpritesResource(Resource[AsyncTransportProtocol]):
     async def get(
         self,
         *,
@@ -230,6 +239,7 @@ class AsyncSpritesResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=SpritesResponseDto,
+            retryable=True,
         )
 
     async def get_all(
@@ -253,6 +263,7 @@ class AsyncSpritesResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=AllSpritesResponseDto,
+            retryable=True,
         )
 
     async def get_versions(self, *, fortnite_token: str | None = None) -> list[SpriteVersionDto]:
@@ -268,6 +279,7 @@ class AsyncSpritesResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[SpriteVersionDto],
+            retryable=True,
         )
 
     async def get_boons(self, *, fortnite_token: str | None = None) -> list[SpriteBoonDto]:
@@ -283,6 +295,7 @@ class AsyncSpritesResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[SpriteBoonDto],
+            retryable=True,
         )
 
     async def get_by_id(self, id: str, *, fortnite_token: str | None = None) -> SpriteFamilyDto:
@@ -292,12 +305,13 @@ class AsyncSpritesResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/sprites/{id}",
+            f"/sprites/{path_segment(id)}",
             "v2",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=SpriteFamilyDto,
+            retryable=True,
         )
 
     async def get_collection(
@@ -317,6 +331,7 @@ class AsyncSpritesResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=SpriteCollectionResponseDto,
+            retryable=True,
         )
 
     async def get_all_collections(
@@ -335,6 +350,7 @@ class AsyncSpritesResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=AllSpriteCollectionsResponseDto,
+            retryable=True,
         )
 
     async def publish_collection(
@@ -383,10 +399,11 @@ class AsyncSpritesResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/sprites/collection/shared/{account_id_or_name}",
+            f"/sprites/collection/shared/{path_segment(account_id_or_name)}",
             "v2",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=SharedSpriteCollectionDto,
+            retryable=True,
         )

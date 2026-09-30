@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..interpret import path_segment
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class FriendsResource(Resource[SyncTransport]):
+class FriendsResource(Resource[SyncTransportProtocol]):
     def get_blocklist(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
         """Get a player's blocklist.
 
@@ -16,12 +17,13 @@ class FriendsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/friends/{account_id}/blocklist",
+            f"/friends/{path_segment(account_id)}/blocklist",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_friends(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -31,12 +33,13 @@ class FriendsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/friends/{account_id}/friends",
+            f"/friends/{path_segment(account_id)}/friends",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_friend(self, account_id: str, friend_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -46,12 +49,13 @@ class FriendsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/friends/{account_id}/friends/{friend_id}",
+            f"/friends/{path_segment(account_id)}/friends/{path_segment(friend_id)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_mutual_friends(self, account_id: str, friend_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -61,12 +65,13 @@ class FriendsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/friends/{account_id}/friends/{friend_id}/mutual",
+            f"/friends/{path_segment(account_id)}/friends/{path_segment(friend_id)}/mutual",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_incoming(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -76,12 +81,13 @@ class FriendsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/friends/{account_id}/incoming",
+            f"/friends/{path_segment(account_id)}/incoming",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_outgoing(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -91,12 +97,13 @@ class FriendsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/friends/{account_id}/outgoing",
+            f"/friends/{path_segment(account_id)}/outgoing",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_suggested(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -106,12 +113,13 @@ class FriendsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/friends/{account_id}/suggested",
+            f"/friends/{path_segment(account_id)}/suggested",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_summary(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -121,16 +129,17 @@ class FriendsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/friends/{account_id}/summary",
+            f"/friends/{path_segment(account_id)}/summary",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
 
-class AsyncFriendsResource(Resource[AsyncTransport]):
+class AsyncFriendsResource(Resource[AsyncTransportProtocol]):
     async def get_blocklist(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
         """Get a player's blocklist.
 
@@ -138,12 +147,13 @@ class AsyncFriendsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/friends/{account_id}/blocklist",
+            f"/friends/{path_segment(account_id)}/blocklist",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_friends(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -153,12 +163,13 @@ class AsyncFriendsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/friends/{account_id}/friends",
+            f"/friends/{path_segment(account_id)}/friends",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_friend(self, account_id: str, friend_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -168,12 +179,13 @@ class AsyncFriendsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/friends/{account_id}/friends/{friend_id}",
+            f"/friends/{path_segment(account_id)}/friends/{path_segment(friend_id)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_mutual_friends(self, account_id: str, friend_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -183,12 +195,13 @@ class AsyncFriendsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/friends/{account_id}/friends/{friend_id}/mutual",
+            f"/friends/{path_segment(account_id)}/friends/{path_segment(friend_id)}/mutual",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_incoming(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -198,12 +211,13 @@ class AsyncFriendsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/friends/{account_id}/incoming",
+            f"/friends/{path_segment(account_id)}/incoming",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_outgoing(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -213,12 +227,13 @@ class AsyncFriendsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/friends/{account_id}/outgoing",
+            f"/friends/{path_segment(account_id)}/outgoing",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_suggested(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -228,12 +243,13 @@ class AsyncFriendsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/friends/{account_id}/suggested",
+            f"/friends/{path_segment(account_id)}/suggested",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_summary(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -243,10 +259,11 @@ class AsyncFriendsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/friends/{account_id}/summary",
+            f"/friends/{path_segment(account_id)}/summary",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )

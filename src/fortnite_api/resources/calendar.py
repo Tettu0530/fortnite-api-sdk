@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from .._transport import AsyncTransport, SyncTransport
 from ..models import SeasonEntryDto
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class CalendarResource(Resource[SyncTransport]):
+class CalendarResource(Resource[SyncTransportProtocol]):
     def get_season(self, *, fortnite_token: str | None = None) -> SeasonEntryDto:
         """Get the current Fortnite season number and start/end dates.
 
@@ -21,10 +21,11 @@ class CalendarResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=SeasonEntryDto,
+            retryable=True,
         )
 
 
-class AsyncCalendarResource(Resource[AsyncTransport]):
+class AsyncCalendarResource(Resource[AsyncTransportProtocol]):
     async def get_season(self, *, fortnite_token: str | None = None) -> SeasonEntryDto:
         """Get the current Fortnite season number and start/end dates.
 
@@ -38,4 +39,5 @@ class AsyncCalendarResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=SeasonEntryDto,
+            retryable=True,
         )

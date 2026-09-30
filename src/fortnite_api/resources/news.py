@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from .._transport import AsyncTransport, SyncTransport
 from ..models import AllNews, NewsFeed, NewsNotice
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class NewsResource(Resource[SyncTransport]):
+class NewsResource(Resource[SyncTransportProtocol]):
     def get_all(
         self, *, lang: str | None = None, platform: str | None = None, fortnite_token: str | None = None
     ) -> AllNews:
@@ -23,6 +23,7 @@ class NewsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=AllNews,
+            retryable=True,
         )
 
     def get_br(
@@ -40,6 +41,7 @@ class NewsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=NewsFeed,
+            retryable=True,
         )
 
     def get_creative(
@@ -57,6 +59,7 @@ class NewsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=NewsFeed,
+            retryable=True,
         )
 
     def get_festival(
@@ -74,6 +77,7 @@ class NewsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=NewsFeed,
+            retryable=True,
         )
 
     def get_notices(self, *, lang: str | None = None, fortnite_token: str | None = None) -> list[NewsNotice]:
@@ -89,6 +93,7 @@ class NewsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[NewsNotice],
+            retryable=True,
         )
 
     def get_stw(
@@ -106,10 +111,11 @@ class NewsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=NewsFeed,
+            retryable=True,
         )
 
 
-class AsyncNewsResource(Resource[AsyncTransport]):
+class AsyncNewsResource(Resource[AsyncTransportProtocol]):
     async def get_all(
         self, *, lang: str | None = None, platform: str | None = None, fortnite_token: str | None = None
     ) -> AllNews:
@@ -125,6 +131,7 @@ class AsyncNewsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=AllNews,
+            retryable=True,
         )
 
     async def get_br(
@@ -142,6 +149,7 @@ class AsyncNewsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=NewsFeed,
+            retryable=True,
         )
 
     async def get_creative(
@@ -159,6 +167,7 @@ class AsyncNewsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=NewsFeed,
+            retryable=True,
         )
 
     async def get_festival(
@@ -176,6 +185,7 @@ class AsyncNewsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=NewsFeed,
+            retryable=True,
         )
 
     async def get_notices(self, *, lang: str | None = None, fortnite_token: str | None = None) -> list[NewsNotice]:
@@ -191,6 +201,7 @@ class AsyncNewsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[NewsNotice],
+            retryable=True,
         )
 
     async def get_stw(
@@ -208,4 +219,5 @@ class AsyncNewsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=NewsFeed,
+            retryable=True,
         )

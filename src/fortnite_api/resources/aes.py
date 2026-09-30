@@ -4,18 +4,25 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class AesResource(Resource[SyncTransport]):
+class AesResource(Resource[SyncTransportProtocol]):
     def get_keys(self, *, fortnite_token: str | None = None) -> Any:
         """Current AES main key and dynamic pak keys.
 
         ``GET /api/v1/aes``
         """
         return self._t.request(
-            "GET", "/aes", "v1", params=None, json_body=None, fortnite_token=fortnite_token, response_type=None
+            "GET",
+            "/aes",
+            "v1",
+            params=None,
+            json_body=None,
+            fortnite_token=fortnite_token,
+            response_type=None,
+            retryable=True,
         )
 
     def get_history(self, *, fortnite_token: str | None = None) -> Any:
@@ -24,7 +31,14 @@ class AesResource(Resource[SyncTransport]):
         ``GET /api/v1/aes/history``
         """
         return self._t.request(
-            "GET", "/aes/history", "v1", params=None, json_body=None, fortnite_token=fortnite_token, response_type=None
+            "GET",
+            "/aes/history",
+            "v1",
+            params=None,
+            json_body=None,
+            fortnite_token=fortnite_token,
+            response_type=None,
+            retryable=True,
         )
 
     def get_mappings(self, *, fortnite_token: str | None = None) -> Any:
@@ -33,18 +47,32 @@ class AesResource(Resource[SyncTransport]):
         ``GET /api/v1/mappings``
         """
         return self._t.request(
-            "GET", "/mappings", "v1", params=None, json_body=None, fortnite_token=fortnite_token, response_type=None
+            "GET",
+            "/mappings",
+            "v1",
+            params=None,
+            json_body=None,
+            fortnite_token=fortnite_token,
+            response_type=None,
+            retryable=True,
         )
 
 
-class AsyncAesResource(Resource[AsyncTransport]):
+class AsyncAesResource(Resource[AsyncTransportProtocol]):
     async def get_keys(self, *, fortnite_token: str | None = None) -> Any:
         """Current AES main key and dynamic pak keys.
 
         ``GET /api/v1/aes``
         """
         return await self._t.request(
-            "GET", "/aes", "v1", params=None, json_body=None, fortnite_token=fortnite_token, response_type=None
+            "GET",
+            "/aes",
+            "v1",
+            params=None,
+            json_body=None,
+            fortnite_token=fortnite_token,
+            response_type=None,
+            retryable=True,
         )
 
     async def get_history(self, *, fortnite_token: str | None = None) -> Any:
@@ -53,7 +81,14 @@ class AsyncAesResource(Resource[AsyncTransport]):
         ``GET /api/v1/aes/history``
         """
         return await self._t.request(
-            "GET", "/aes/history", "v1", params=None, json_body=None, fortnite_token=fortnite_token, response_type=None
+            "GET",
+            "/aes/history",
+            "v1",
+            params=None,
+            json_body=None,
+            fortnite_token=fortnite_token,
+            response_type=None,
+            retryable=True,
         )
 
     async def get_mappings(self, *, fortnite_token: str | None = None) -> Any:
@@ -62,5 +97,12 @@ class AsyncAesResource(Resource[AsyncTransport]):
         ``GET /api/v1/mappings``
         """
         return await self._t.request(
-            "GET", "/mappings", "v1", params=None, json_body=None, fortnite_token=fortnite_token, response_type=None
+            "GET",
+            "/mappings",
+            "v1",
+            params=None,
+            json_body=None,
+            fortnite_token=fortnite_token,
+            response_type=None,
+            retryable=True,
         )

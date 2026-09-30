@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class AssetsResource(Resource[SyncTransport]):
+class AssetsResource(Resource[SyncTransportProtocol]):
     def get_shop_bundles(self, *, fortnite_token: str | None = None) -> Any:
         """Get shop asset bundles.
 
@@ -22,6 +22,7 @@ class AssetsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_tournament_bundles(self, *, fortnite_token: str | None = None) -> Any:
@@ -37,10 +38,11 @@ class AssetsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
 
-class AsyncAssetsResource(Resource[AsyncTransport]):
+class AsyncAssetsResource(Resource[AsyncTransportProtocol]):
     async def get_shop_bundles(self, *, fortnite_token: str | None = None) -> Any:
         """Get shop asset bundles.
 
@@ -54,6 +56,7 @@ class AsyncAssetsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_tournament_bundles(self, *, fortnite_token: str | None = None) -> Any:
@@ -69,4 +72,5 @@ class AsyncAssetsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )

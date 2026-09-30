@@ -1,6 +1,6 @@
 ---
 name: fortnite-api
-description: Write correct Python code against the Fortnite API at api-fortnite.com using the official `fortnite-api-sdk` package (`import fortnite_api`, `FortniteAPI` / `AsyncFortniteAPI`). Use this skill whenever the user writes, fixes, or reviews code that imports `fortnite_api` or depends on `fortnite-api-sdk`, or asks for Fortnite data in Python - item shop, cosmetics, weapons, map, news, playlists, battle pass, sprites, AES keys, Fortnite Crew, tournaments / event leaderboards, cash prizes, Power Rankings, player stats, ranked progress, account lookup, friends, quests, OAuth / x-fortnite-token, custom matches, tournament replays or .replay file parsing - even if they do not name the SDK. Also use it when upgrading code from fortnite-api-sdk 0.1.x to 0.2.x. Do NOT use it for fortnite-api.com (a different, unrelated service with its own `fortnite-api` package), other unofficial Fortnite APIs, Epic's own endpoints called directly, or the TypeScript SDK `@yaelouuu/fortnite-api`.
+description: Write correct Python code against the Fortnite API at api-fortnite.com using the official `fortnite-api-sdk` package (`import fortnite_api`, `FortniteAPI` / `AsyncFortniteAPI`). Use this skill whenever the user writes, fixes, or reviews code that imports `fortnite_api` or depends on `fortnite-api-sdk`, or asks for Fortnite data in Python - item shop, cosmetics, weapons, map, news, playlists, battle pass, sprites, AES keys, Fortnite Crew, tournaments / event leaderboards, cash prizes, Power Rankings, player stats, ranked progress, account lookup, friends, quests, OAuth / x-fortnite-token, custom matches, tournament replays or .replay file parsing - even if they do not name the SDK. Also use it when upgrading code from fortnite-api-sdk 0.1.x or 0.2.x to 0.3.x, or when writing a custom transport for the SDK. Do NOT use it for fortnite-api.com (a different, unrelated service with its own `fortnite-api` package), other unofficial Fortnite APIs, Epic's own endpoints called directly, or the TypeScript SDK `@yaelouuu/fortnite-api`.
 ---
 
 # fortnite-api-sdk (Python)
@@ -10,8 +10,11 @@ The `fortnite-api-sdk` package is a generated, fully typed client for **https://
 identical method names and signatures, 26 resources, 146 endpoint methods plus `health()` and
 `health_version()`.
 
-The public surface is small: `FortniteAPI`, `AsyncFortniteAPI`, `FortniteAPIError`, and the
-`fortnite_api.models` module. Everything else (`_transport`, `resources`) is internal.
+The public surface is small: `FortniteAPI`, `AsyncFortniteAPI`, `FortniteAPIError` and its
+subclasses (`fortnite_api.errors`), `RetryConfig`, the transport protocols
+(`SyncTransportProtocol` / `AsyncTransportProtocol`, `fortnite_api.interpret`) and the
+`fortnite_api.models` module. The built-in `SyncTransport` / `AsyncTransport` are exported too, but
+you normally never touch them. Everything else (`_transport`, `resources`) is internal.
 
 Before writing a call you are not sure about, open the matching reference file (see the
 resource map at the end) - it lists every method's exact signature, return type and HTTP path,
@@ -36,7 +39,7 @@ from fortnite_api import FortniteAPI
 client = FortniteAPI(api_key=os.environ["FORTNITE_API_KEY"])
 ```
 
-An empty `api_key` raises `ValueError` immediately.
+A missing or empty `api_key` raises `ValueError` immediately (unless `transport=` is given, see below).
 
 ## Creating clients
 
@@ -52,9 +55,34 @@ async with AsyncFortniteAPI(api_key=key) as client:
     shop = await client.shop.get_current()
 ```
 
-Constructor: `FortniteAPI(api_key, *, base_url=DEFAULT_BASE_URL, timeout=30.0, fortnite_token=None)`
-(same for `AsyncFortniteAPI`). Without a context manager call `client.close()` /
-`await client.close()`. Create one client and reuse it; do not build a client per request.
+Constructor (same for `AsyncFortniteAPI`):
+
+```
+FortniteAPI(api_key=None, *, base_url=None, timeout=None, fortnite_token=None, retry=None,
+            follow_redirects=None, max_redirects=None, user_agent=None, transport=None)
+```
+
+`None` means the default: base URL `https://prod.api-fortnite.com/api`, `timeout=30.0`, no retries,
+redirects not followed (`max_redirects=5` when enabled), User-Agent
+`fortnite-api-sdk/<version> python-httpx/<version>`. Without a context manager call
+`client.close()` / `await client.close()`. Create one client and reuse it; do not build a client per
+request.
+
+`transport=` takes any object implementing `fortnite_api.SyncTransportProtocol` /
+`AsyncTransportProtocol` (methods `request`, `request_binary`, `request_redirect`,
+`request_multipart`). It is exclusive: passing `api_key=` or any other option together with it
+raises `ValueError`, and `close()` does not close an injected transport. A custom transport should
+reuse `fortnite_api.interpret` (`build_url`, `build_headers`, `clean_params`, `serialize_body`,
+`interpret_json`, `interpret_binary`, `interpret_redirect`) so errors and models behave exactly
+like the built-in one; see `examples/custom_transport.py` in the repository. A transport must not
+let its HTTP library follow redirects (httpx `follow_redirects=False`; aiohttp
+`allow_redirects=False` on every request, since aiohttp follows them by default and re-sends
+`x-api-key` to other hosts), and should raise `APIConnectionError` / `APITimeoutError`
+(`raise ... from exc`, without the original message) for network failures. A sync transport given
+to `AsyncFortniteAPI` (or vice versa) raises `TypeError`. `RetryConfig.next_delay(attempt,
+retryable=..., status=..., headers=...)` reuses the SDK's retry policy. Credentials that are not
+printable ASCII or carry leading/trailing whitespace (e.g. a trailing newline from a file) raise
+`ValueError` before anything is sent.
 
 `client.health()` and `client.health_version()` hit `/health` and `/health/version` (raw JSON).
 
@@ -84,27 +112,42 @@ When a token-free alternative exists, prefer it: `power_rankings.search()` and
 
 ## Errors
 
-Every non-2xx response raises `fortnite_api.FortniteAPIError`:
+Every failure raises a subclass of `fortnite_api.FortniteAPIError`:
 
 ```python
-from fortnite_api import FortniteAPIError
+from fortnite_api import AuthError, FortniteAPIError, NotFoundError, PlanRequiredError, RateLimitError
 
 try:
     stats = client.stats.get(account_id)
+except RateLimitError as err:     # 429
+    err.retry_after               # float seconds from Retry-After, or None - uncapped, clamp it
+except NotFoundError:             # 404
+    ...
 except FortniteAPIError as err:
-    err.status    # int HTTP status (401 bad key, 403 missing/wrong token, 404, 429 ...)
-    err.message   # str - taken from the body's "error" / "title" / "detail"
-    err.data      # raw error body (dict), or {"error": "Request failed"} if not JSON
+    err.status    # int HTTP status, or 0 for connection errors / timeouts
+    err.message   # str - taken from the body's "error" / "title" / "detail" / "message"
+    err.data      # response body (dict), or {"error": "Request failed"} if not JSON
     str(err)      # "[404] Not found"
 ```
 
-Also: a 2xx body shaped `{"success": false, ...}` is raised as `FortniteAPIError` with
-`status == 422`. Network failures and timeouts are **not** wrapped - they surface as `httpx`
-exceptions (`httpx.TimeoutException`, `httpx.ConnectError`, ...), so catch `httpx.HTTPError` too
-if you need resilience. Pydantic `ValidationError` is possible if the API returns a shape that
-contradicts the spec, but models are lenient (all fields optional), so it is rare.
+Status mapping: 3xx `RedirectError` (redirects are not followed by default), 401 `AuthError`,
+403 `PlanRequiredError`, 404 `NotFoundError`, 429 `RateLimitError`, other 4xx `ClientError`
+(the parent of the four 4xx classes), 5xx `ServerError`. A 2xx body shaped
+`{"success": false, ...}` raises `UnsuccessfulResponseError` with the real HTTP status. A non-JSON
+2xx body raises `DecodeError`; a body contradicting the model raises `ValidationError` (the pydantic
+error is `err.validation_error`). Network failures raise `APIConnectionError` and timeouts
+`APITimeoutError` (both `status == 0`, the httpx exception is `__cause__`).
 
-There is no built-in retry or rate limiting. For 429 or 5xx, implement backoff yourself.
+`RateLimitError` is itself a `ClientError`. `fortnite_api.NETWORK_ERROR_STATUS` is `0`.
+Exception messages, `data` and `repr(client)` never contain the API key or user token.
+
+Retries are off by default. `FortniteAPI(api_key, retry=RetryConfig(max_retries=3))` retries the
+GETs (except `replays.parse*`, which consume parsing credits, and `oauth.get_token`, which starts a
+new device-code flow) and the read-only bulk lookups (`account.bulk_external_display_names`,
+`account.bulk_external_ids`, `stats.get_bulk`, `profile.bulk_track_progress`,
+`profile.get_leaderboard`) on 429, 5xx, connection errors and timeouts, honouring `Retry-After`
+(capped at `max_retry_after`). `RetryConfig(max_retries=2, backoff_base=0.5, backoff_max=8.0,
+jitter=True, max_retry_after=60.0)` are the defaults. When retries run out, the last error is raised.
 
 ## Return values
 
@@ -188,8 +231,8 @@ The bundled OpenAPI spec tags each endpoint with the plans allowed to call it (s
 `shop.get_current`, `calendar.get_season`, `battlepass.get_legacy`, `stats.get`, all ten
 `account.*` methods, `replays.download` and `parsing.parse_stats`. Most other endpoints require
 `pro` or `custom`; `custom_match.*`, `identity.*` and `tournaments.get_player_session` are
-`custom` only. If a call is rejected (`FortniteAPIError`, typically 401/403/429) with a key that
-works for other endpoints, check the plan before debugging code and tell the user which plan the
+`custom` only. If a call is rejected (`PlanRequiredError` / `AuthError` / `RateLimitError`, i.e.
+403/401/429) with a key that works for other endpoints, check the plan before debugging code and tell the user which plan the
 endpoint needs. The spec reflects the SDK's release; the live service is authoritative.
 
 Replay parsing (`replays.parse*`, `parsing.*`) is charged against a per-plan parsing quota. The
@@ -214,6 +257,17 @@ bound concurrency (e.g. `asyncio.Semaphore`) instead of firing hundreds of reque
 - **Keyword-only arguments.** Optional parameters (and many required-looking ones such as
   `tournaments.get_leaderboard(event_id=..., event_window_id=...)`) are keyword-only. Check the
   signature: parameters after `*` must be passed by name.
+- **0.2.x error handling.** In 0.3.0 errors are subclasses of `FortniteAPIError`: prefer
+  `except NotFoundError` over `if err.status == 404`, and do not use `type(err) is FortniteAPIError`.
+  `httpx` exceptions no longer escape (use `APIConnectionError` / `APITimeoutError`), and
+  `{"success": false}` no longer becomes a fake 422 (it is `UnsuccessfulResponseError`).
+- **Redirects.** A 3xx raises `RedirectError`; only pass `follow_redirects=True` if you really need
+  it (credentials are then re-sent to the same origin only).
+- **Do not pre-encode path parameters.** Every path value is percent-encoded as one segment
+  (`"a/b"` -> `a%2Fb`), so passing `"a%2Fb"` sends `a%252Fb`. Empty path values raise `ValueError`.
+- **Retries are opt-in** and cover the GETs plus the read-only bulk lookups. `replays.parse*`
+  (parsing credits), `oauth.get_token` and the `parsing.*` uploads are never retried. Do not wrap
+  them in your own blind retry loop.
 - **Forgetting `await`** on `AsyncFortniteAPI` methods returns a coroutine, not data.
 - **Tokens are secrets.** Never log `fortnite_token` values or device-auth secrets.
 - **Wrong service.** `fortnite-api.com` is a different API. Its community Python package

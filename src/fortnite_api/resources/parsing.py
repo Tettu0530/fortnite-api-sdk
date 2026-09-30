@@ -4,18 +4,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, FileInput, SyncTransport
+from ..interpret import FileInput, file_tuple
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class ParsingResource(Resource[SyncTransport]):
+class ParsingResource(Resource[SyncTransportProtocol]):
     def parse_replay(self, file: FileInput, *, filename: str | None = None) -> Any:
         """Parse a single Fortnite .replay file and extract match statistics. Subject to per-plan parsing quota
         limits.
 
         ``POST /api/v1/parsing``
         """
-        payload = {"file": self._t._file_tuple(file, filename)}
+        payload = {"file": file_tuple(file, filename)}
         return self._t.request_multipart("/parsing", payload, response_type=None)
 
     def parse_stats(self, file: FileInput, *, filename: str | None = None) -> Any:
@@ -26,7 +27,7 @@ class ParsingResource(Resource[SyncTransport]):
 
         ``POST /api/v1/parsing/stats``
         """
-        payload = {"file": self._t._file_tuple(file, filename)}
+        payload = {"file": file_tuple(file, filename)}
         return self._t.request_multipart("/parsing/stats", payload, response_type=None)
 
     def parse_map(self, file: FileInput, *, filename: str | None = None) -> Any:
@@ -35,7 +36,7 @@ class ParsingResource(Resource[SyncTransport]):
 
         ``POST /api/v1/parsing/map``
         """
-        payload = {"file": self._t._file_tuple(file, filename)}
+        payload = {"file": file_tuple(file, filename)}
         return self._t.request_multipart("/parsing/map", payload, response_type=None)
 
     def parse_loot(self, file: FileInput, *, filename: str | None = None) -> Any:
@@ -46,7 +47,7 @@ class ParsingResource(Resource[SyncTransport]):
 
         ``POST /api/v1/parsing/loot``
         """
-        payload = {"file": self._t._file_tuple(file, filename)}
+        payload = {"file": file_tuple(file, filename)}
         return self._t.request_multipart("/parsing/loot", payload, response_type=None)
 
     def parse_timeline(self, file: FileInput, *, filename: str | None = None) -> Any:
@@ -57,7 +58,7 @@ class ParsingResource(Resource[SyncTransport]):
 
         ``POST /api/v1/parsing/timeline``
         """
-        payload = {"file": self._t._file_tuple(file, filename)}
+        payload = {"file": file_tuple(file, filename)}
         return self._t.request_multipart("/parsing/timeline", payload, response_type=None)
 
     def parse_zones(self, file: FileInput, *, filename: str | None = None) -> Any:
@@ -66,7 +67,7 @@ class ParsingResource(Resource[SyncTransport]):
 
         ``POST /api/v1/parsing/zones``
         """
-        payload = {"file": self._t._file_tuple(file, filename)}
+        payload = {"file": file_tuple(file, filename)}
         return self._t.request_multipart("/parsing/zones", payload, response_type=None)
 
     def parse_lobby(self, file: FileInput, *, filename: str | None = None) -> Any:
@@ -75,7 +76,7 @@ class ParsingResource(Resource[SyncTransport]):
 
         ``POST /api/v1/parsing/lobby``
         """
-        payload = {"file": self._t._file_tuple(file, filename)}
+        payload = {"file": file_tuple(file, filename)}
         return self._t.request_multipart("/parsing/lobby", payload, response_type=None)
 
     def parse_broadcast(self, file: FileInput, *, filename: str | None = None) -> Any:
@@ -85,7 +86,7 @@ class ParsingResource(Resource[SyncTransport]):
 
         ``POST /api/v1/parsing/broadcast``
         """
-        payload = {"file": self._t._file_tuple(file, filename)}
+        payload = {"file": file_tuple(file, filename)}
         return self._t.request_multipart("/parsing/broadcast", payload, response_type=None)
 
     def parse_multiple(self, files: list[FileInput], *, filenames: list[str] | None = None) -> Any:
@@ -93,7 +94,7 @@ class ParsingResource(Resource[SyncTransport]):
 
         ``POST /api/v1/parsing/multiple``
         """
-        payload = [("files", self._t._file_tuple(f, filenames[i] if filenames else None)) for i, f in enumerate(files)]
+        payload = [("files", file_tuple(f, filenames[i] if filenames else None)) for i, f in enumerate(files)]
         return self._t.request_multipart("/parsing/multiple", payload, response_type=None)
 
     def parse_multiple_stats(self, files: list[FileInput], *, filenames: list[str] | None = None) -> Any:
@@ -101,7 +102,7 @@ class ParsingResource(Resource[SyncTransport]):
 
         ``POST /api/v1/parsing/multiple/stats``
         """
-        payload = [("files", self._t._file_tuple(f, filenames[i] if filenames else None)) for i, f in enumerate(files)]
+        payload = [("files", file_tuple(f, filenames[i] if filenames else None)) for i, f in enumerate(files)]
         return self._t.request_multipart("/parsing/multiple/stats", payload, response_type=None)
 
     def parse_multiple_map(self, files: list[FileInput], *, filenames: list[str] | None = None) -> Any:
@@ -109,7 +110,7 @@ class ParsingResource(Resource[SyncTransport]):
 
         ``POST /api/v1/parsing/multiple/map``
         """
-        payload = [("files", self._t._file_tuple(f, filenames[i] if filenames else None)) for i, f in enumerate(files)]
+        payload = [("files", file_tuple(f, filenames[i] if filenames else None)) for i, f in enumerate(files)]
         return self._t.request_multipart("/parsing/multiple/map", payload, response_type=None)
 
     def parse_multiple_loot(self, files: list[FileInput], *, filenames: list[str] | None = None) -> Any:
@@ -117,18 +118,18 @@ class ParsingResource(Resource[SyncTransport]):
 
         ``POST /api/v1/parsing/multiple/loot``
         """
-        payload = [("files", self._t._file_tuple(f, filenames[i] if filenames else None)) for i, f in enumerate(files)]
+        payload = [("files", file_tuple(f, filenames[i] if filenames else None)) for i, f in enumerate(files)]
         return self._t.request_multipart("/parsing/multiple/loot", payload, response_type=None)
 
 
-class AsyncParsingResource(Resource[AsyncTransport]):
+class AsyncParsingResource(Resource[AsyncTransportProtocol]):
     async def parse_replay(self, file: FileInput, *, filename: str | None = None) -> Any:
         """Parse a single Fortnite .replay file and extract match statistics. Subject to per-plan parsing quota
         limits.
 
         ``POST /api/v1/parsing``
         """
-        payload = {"file": self._t._file_tuple(file, filename)}
+        payload = {"file": file_tuple(file, filename)}
         return await self._t.request_multipart("/parsing", payload, response_type=None)
 
     async def parse_stats(self, file: FileInput, *, filename: str | None = None) -> Any:
@@ -139,7 +140,7 @@ class AsyncParsingResource(Resource[AsyncTransport]):
 
         ``POST /api/v1/parsing/stats``
         """
-        payload = {"file": self._t._file_tuple(file, filename)}
+        payload = {"file": file_tuple(file, filename)}
         return await self._t.request_multipart("/parsing/stats", payload, response_type=None)
 
     async def parse_map(self, file: FileInput, *, filename: str | None = None) -> Any:
@@ -148,7 +149,7 @@ class AsyncParsingResource(Resource[AsyncTransport]):
 
         ``POST /api/v1/parsing/map``
         """
-        payload = {"file": self._t._file_tuple(file, filename)}
+        payload = {"file": file_tuple(file, filename)}
         return await self._t.request_multipart("/parsing/map", payload, response_type=None)
 
     async def parse_loot(self, file: FileInput, *, filename: str | None = None) -> Any:
@@ -159,7 +160,7 @@ class AsyncParsingResource(Resource[AsyncTransport]):
 
         ``POST /api/v1/parsing/loot``
         """
-        payload = {"file": self._t._file_tuple(file, filename)}
+        payload = {"file": file_tuple(file, filename)}
         return await self._t.request_multipart("/parsing/loot", payload, response_type=None)
 
     async def parse_timeline(self, file: FileInput, *, filename: str | None = None) -> Any:
@@ -170,7 +171,7 @@ class AsyncParsingResource(Resource[AsyncTransport]):
 
         ``POST /api/v1/parsing/timeline``
         """
-        payload = {"file": self._t._file_tuple(file, filename)}
+        payload = {"file": file_tuple(file, filename)}
         return await self._t.request_multipart("/parsing/timeline", payload, response_type=None)
 
     async def parse_zones(self, file: FileInput, *, filename: str | None = None) -> Any:
@@ -179,7 +180,7 @@ class AsyncParsingResource(Resource[AsyncTransport]):
 
         ``POST /api/v1/parsing/zones``
         """
-        payload = {"file": self._t._file_tuple(file, filename)}
+        payload = {"file": file_tuple(file, filename)}
         return await self._t.request_multipart("/parsing/zones", payload, response_type=None)
 
     async def parse_lobby(self, file: FileInput, *, filename: str | None = None) -> Any:
@@ -188,7 +189,7 @@ class AsyncParsingResource(Resource[AsyncTransport]):
 
         ``POST /api/v1/parsing/lobby``
         """
-        payload = {"file": self._t._file_tuple(file, filename)}
+        payload = {"file": file_tuple(file, filename)}
         return await self._t.request_multipart("/parsing/lobby", payload, response_type=None)
 
     async def parse_broadcast(self, file: FileInput, *, filename: str | None = None) -> Any:
@@ -198,7 +199,7 @@ class AsyncParsingResource(Resource[AsyncTransport]):
 
         ``POST /api/v1/parsing/broadcast``
         """
-        payload = {"file": self._t._file_tuple(file, filename)}
+        payload = {"file": file_tuple(file, filename)}
         return await self._t.request_multipart("/parsing/broadcast", payload, response_type=None)
 
     async def parse_multiple(self, files: list[FileInput], *, filenames: list[str] | None = None) -> Any:
@@ -206,7 +207,7 @@ class AsyncParsingResource(Resource[AsyncTransport]):
 
         ``POST /api/v1/parsing/multiple``
         """
-        payload = [("files", self._t._file_tuple(f, filenames[i] if filenames else None)) for i, f in enumerate(files)]
+        payload = [("files", file_tuple(f, filenames[i] if filenames else None)) for i, f in enumerate(files)]
         return await self._t.request_multipart("/parsing/multiple", payload, response_type=None)
 
     async def parse_multiple_stats(self, files: list[FileInput], *, filenames: list[str] | None = None) -> Any:
@@ -214,7 +215,7 @@ class AsyncParsingResource(Resource[AsyncTransport]):
 
         ``POST /api/v1/parsing/multiple/stats``
         """
-        payload = [("files", self._t._file_tuple(f, filenames[i] if filenames else None)) for i, f in enumerate(files)]
+        payload = [("files", file_tuple(f, filenames[i] if filenames else None)) for i, f in enumerate(files)]
         return await self._t.request_multipart("/parsing/multiple/stats", payload, response_type=None)
 
     async def parse_multiple_map(self, files: list[FileInput], *, filenames: list[str] | None = None) -> Any:
@@ -222,7 +223,7 @@ class AsyncParsingResource(Resource[AsyncTransport]):
 
         ``POST /api/v1/parsing/multiple/map``
         """
-        payload = [("files", self._t._file_tuple(f, filenames[i] if filenames else None)) for i, f in enumerate(files)]
+        payload = [("files", file_tuple(f, filenames[i] if filenames else None)) for i, f in enumerate(files)]
         return await self._t.request_multipart("/parsing/multiple/map", payload, response_type=None)
 
     async def parse_multiple_loot(self, files: list[FileInput], *, filenames: list[str] | None = None) -> Any:
@@ -230,5 +231,5 @@ class AsyncParsingResource(Resource[AsyncTransport]):
 
         ``POST /api/v1/parsing/multiple/loot``
         """
-        payload = [("files", self._t._file_tuple(f, filenames[i] if filenames else None)) for i, f in enumerate(files)]
+        payload = [("files", file_tuple(f, filenames[i] if filenames else None)) for i, f in enumerate(files)]
         return await self._t.request_multipart("/parsing/multiple/loot", payload, response_type=None)

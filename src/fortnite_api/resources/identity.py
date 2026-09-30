@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..interpret import path_segment
 from ..models import LinkRequest
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class IdentityResource(Resource[SyncTransport]):
+class IdentityResource(Resource[SyncTransportProtocol]):
     def link(self, body: LinkRequest | dict[str, Any], *, fortnite_token: str | None = None) -> Any:
         """Store a Discord→Epic link. The caller runs the /oauth flow first (so it holds a real, API-minted
         epic_account_id) and reports the Discord user who authorised.
@@ -33,16 +34,17 @@ class IdentityResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/identity/{discord_id}",
+            f"/identity/{path_segment(discord_id)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
 
-class AsyncIdentityResource(Resource[AsyncTransport]):
+class AsyncIdentityResource(Resource[AsyncTransportProtocol]):
     async def link(self, body: LinkRequest | dict[str, Any], *, fortnite_token: str | None = None) -> Any:
         """Store a Discord→Epic link. The caller runs the /oauth flow first (so it holds a real, API-minted
         epic_account_id) and reports the Discord user who authorised.
@@ -66,10 +68,11 @@ class AsyncIdentityResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/identity/{discord_id}",
+            f"/identity/{path_segment(discord_id)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )

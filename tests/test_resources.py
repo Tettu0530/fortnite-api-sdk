@@ -1,4 +1,4 @@
-"""Offline tests for the generated v0.2.0 resources (typed models, params, bodies, deprecations)."""
+"""Offline tests for the generated resources (typed models, params, bodies, deprecations)."""
 
 from __future__ import annotations
 
@@ -22,6 +22,7 @@ from fortnite_api.models import (
     WeaponListItemDto,
 )
 from fortnite_api.resources._base import Resource
+from tests.helpers import mock_async, mock_sync
 
 
 class Recorder:
@@ -51,9 +52,7 @@ class Recorder:
 def sync_client():
     def make(payload: Any = None) -> tuple[FortniteAPI, Recorder]:
         rec = Recorder(payload)
-        client = FortniteAPI("key")
-        client._t._client.close()
-        client._t._client = httpx.Client(transport=httpx.MockTransport(rec))
+        client = mock_sync(rec)
         clients.append(client)
         return client, rec
 
@@ -65,9 +64,7 @@ def sync_client():
 
 def make_async(payload: Any = None) -> tuple[AsyncFortniteAPI, Recorder]:
     rec = Recorder(payload)
-    client = AsyncFortniteAPI("key")
-    client._t._client = httpx.AsyncClient(transport=httpx.MockTransport(rec))
-    return client, rec
+    return mock_async(rec), rec
 
 
 # --- typed model parsing -------------------------------------------------------------------
@@ -172,17 +169,17 @@ def test_map_mode_param(sync_client):
     assert rec.query() == {"mode": ["reload"]}
 
 
-def test_map_image_mode_param_redirect(sync_client):
+def test_map_image_mode_param_redirect():
     rec = Recorder()
 
     def handler(request: httpx.Request) -> httpx.Response:
         rec.requests.append(request)
         return httpx.Response(302, headers={"location": "https://img/x.png"})
 
-    client, _ = sync_client()
-    client._t._client = httpx.Client(transport=httpx.MockTransport(handler))
+    client = mock_sync(handler)
     assert client.map.get_image(mode="br", version="33.10") == "https://img/x.png"
     assert rec.query() == {"mode": ["br"], "version": ["33.10"]}
+    client.close()
 
 
 @pytest.mark.parametrize("method", ["get_all", "get_br", "get_stw", "get_creative", "get_festival"])

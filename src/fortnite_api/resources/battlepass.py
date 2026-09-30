@@ -5,12 +5,12 @@ from __future__ import annotations
 import warnings
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
 from ..models import BattlePassCatalog, BattlePassSeasonDto
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class BattlePassResource(Resource[SyncTransport]):
+class BattlePassResource(Resource[SyncTransportProtocol]):
     def get(self, *, season: int | None = None, fortnite_token: str | None = None) -> BattlePassCatalog:
         """The current battle pass, or an archived one via `?season=`.
 
@@ -24,6 +24,7 @@ class BattlePassResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=BattlePassCatalog,
+            retryable=True,
         )
 
     def get_seasons(self, *, fortnite_token: str | None = None) -> list[BattlePassSeasonDto]:
@@ -39,6 +40,7 @@ class BattlePassResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[BattlePassSeasonDto],
+            retryable=True,
         )
 
     def get_legacy(self, *, lang: str | None = None, fortnite_token: str | None = None) -> Any:
@@ -66,10 +68,11 @@ class BattlePassResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
 
-class AsyncBattlePassResource(Resource[AsyncTransport]):
+class AsyncBattlePassResource(Resource[AsyncTransportProtocol]):
     async def get(self, *, season: int | None = None, fortnite_token: str | None = None) -> BattlePassCatalog:
         """The current battle pass, or an archived one via `?season=`.
 
@@ -83,6 +86,7 @@ class AsyncBattlePassResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=BattlePassCatalog,
+            retryable=True,
         )
 
     async def get_seasons(self, *, fortnite_token: str | None = None) -> list[BattlePassSeasonDto]:
@@ -98,6 +102,7 @@ class AsyncBattlePassResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[BattlePassSeasonDto],
+            retryable=True,
         )
 
     async def get_legacy(self, *, lang: str | None = None, fortnite_token: str | None = None) -> Any:
@@ -125,4 +130,5 @@ class AsyncBattlePassResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )

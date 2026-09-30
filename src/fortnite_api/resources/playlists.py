@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..interpret import path_segment
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class PlaylistsResource(Resource[SyncTransport]):
+class PlaylistsResource(Resource[SyncTransportProtocol]):
     def get_all(self, *, lang: str | None = None, fortnite_token: str | None = None) -> Any:
         """Get all playlists (game modes).
 
@@ -22,6 +23,7 @@ class PlaylistsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_active(self, *, lang: str | None = None, fortnite_token: str | None = None) -> Any:
@@ -37,6 +39,7 @@ class PlaylistsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_by_id(self, playlist_id: str, *, lang: str | None = None, fortnite_token: str | None = None) -> Any:
@@ -46,16 +49,17 @@ class PlaylistsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/playlists/{playlist_id}",
+            f"/playlists/{path_segment(playlist_id)}",
             "v2",
             params={"lang": lang},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
 
-class AsyncPlaylistsResource(Resource[AsyncTransport]):
+class AsyncPlaylistsResource(Resource[AsyncTransportProtocol]):
     async def get_all(self, *, lang: str | None = None, fortnite_token: str | None = None) -> Any:
         """Get all playlists (game modes).
 
@@ -69,6 +73,7 @@ class AsyncPlaylistsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_active(self, *, lang: str | None = None, fortnite_token: str | None = None) -> Any:
@@ -84,6 +89,7 @@ class AsyncPlaylistsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_by_id(self, playlist_id: str, *, lang: str | None = None, fortnite_token: str | None = None) -> Any:
@@ -93,10 +99,11 @@ class AsyncPlaylistsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/playlists/{playlist_id}",
+            f"/playlists/{path_segment(playlist_id)}",
             "v2",
             params={"lang": lang},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )

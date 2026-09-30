@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..interpret import path_segment
 from ..models import PatchInfoDto, RarityDefinitionDto, WeaponListItemDto
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class WeaponsResource(Resource[SyncTransport]):
+class WeaponsResource(Resource[SyncTransportProtocol]):
     def get(
         self,
         *,
@@ -54,6 +55,7 @@ class WeaponsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[WeaponListItemDto],
+            retryable=True,
         )
 
     def get_by_id(
@@ -71,12 +73,13 @@ class WeaponsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/weapons/{id}",
+            f"/weapons/{path_segment(id)}",
             "v2",
             params={"major": major, "minor": minor, "date": date},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=WeaponListItemDto,
+            retryable=True,
         )
 
     def get_lootpool(
@@ -111,6 +114,7 @@ class WeaponsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_patches(self, *, fortnite_token: str | None = None) -> list[PatchInfoDto]:
@@ -126,6 +130,7 @@ class WeaponsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[PatchInfoDto],
+            retryable=True,
         )
 
     def get_rarities(self, *, fortnite_token: str | None = None) -> list[RarityDefinitionDto]:
@@ -141,10 +146,11 @@ class WeaponsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[RarityDefinitionDto],
+            retryable=True,
         )
 
 
-class AsyncWeaponsResource(Resource[AsyncTransport]):
+class AsyncWeaponsResource(Resource[AsyncTransportProtocol]):
     async def get(
         self,
         *,
@@ -189,6 +195,7 @@ class AsyncWeaponsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[WeaponListItemDto],
+            retryable=True,
         )
 
     async def get_by_id(
@@ -206,12 +213,13 @@ class AsyncWeaponsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/weapons/{id}",
+            f"/weapons/{path_segment(id)}",
             "v2",
             params={"major": major, "minor": minor, "date": date},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=WeaponListItemDto,
+            retryable=True,
         )
 
     async def get_lootpool(
@@ -246,6 +254,7 @@ class AsyncWeaponsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_patches(self, *, fortnite_token: str | None = None) -> list[PatchInfoDto]:
@@ -261,6 +270,7 @@ class AsyncWeaponsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[PatchInfoDto],
+            retryable=True,
         )
 
     async def get_rarities(self, *, fortnite_token: str | None = None) -> list[RarityDefinitionDto]:
@@ -276,4 +286,5 @@ class AsyncWeaponsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[RarityDefinitionDto],
+            retryable=True,
         )
