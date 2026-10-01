@@ -4,18 +4,26 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..interpret import path_segment
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class StatsResource(Resource[SyncTransport]):
+class StatsResource(Resource[SyncTransportProtocol]):
     def get_bulk(self, body: Any, *, fortnite_token: str | None = None) -> Any:
         """Get stats for multiple players in one request.
 
         ``POST /api/v2/stats/bulk``
         """
         return self._t.request(
-            "POST", "/stats/bulk", "v2", params=None, json_body=body, fortnite_token=fortnite_token, response_type=None
+            "POST",
+            "/stats/bulk",
+            "v2",
+            params=None,
+            json_body=body,
+            fortnite_token=fortnite_token,
+            response_type=None,
+            retryable=True,
         )
 
     def get_leaderboard(
@@ -33,12 +41,13 @@ class StatsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/stats/leaderboard/{stat}",
+            f"/stats/leaderboard/{path_segment(stat)}",
             "v2",
             params={"limit": limit, "offset": offset, "window": window},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get(
@@ -56,23 +65,31 @@ class StatsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/stats/{account_id}",
+            f"/stats/{path_segment(account_id)}",
             "v2",
             params={"startTime": start_time, "endTime": end_time, "stats": stats},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
 
-class AsyncStatsResource(Resource[AsyncTransport]):
+class AsyncStatsResource(Resource[AsyncTransportProtocol]):
     async def get_bulk(self, body: Any, *, fortnite_token: str | None = None) -> Any:
         """Get stats for multiple players in one request.
 
         ``POST /api/v2/stats/bulk``
         """
         return await self._t.request(
-            "POST", "/stats/bulk", "v2", params=None, json_body=body, fortnite_token=fortnite_token, response_type=None
+            "POST",
+            "/stats/bulk",
+            "v2",
+            params=None,
+            json_body=body,
+            fortnite_token=fortnite_token,
+            response_type=None,
+            retryable=True,
         )
 
     async def get_leaderboard(
@@ -90,12 +107,13 @@ class AsyncStatsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/stats/leaderboard/{stat}",
+            f"/stats/leaderboard/{path_segment(stat)}",
             "v2",
             params={"limit": limit, "offset": offset, "window": window},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get(
@@ -113,10 +131,11 @@ class AsyncStatsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/stats/{account_id}",
+            f"/stats/{path_segment(account_id)}",
             "v2",
             params={"startTime": start_time, "endTime": end_time, "stats": stats},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )

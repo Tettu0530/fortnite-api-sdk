@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..interpret import path_segment
 from ..models import (
     CashPrizeScoringDto,
     EventLeaderboardDto,
@@ -16,10 +16,11 @@ from ..models import (
     PlayerWindowStandingDto,
     TeamEventStatsDto,
 )
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class TournamentsResource(Resource[SyncTransport]):
+class TournamentsResource(Resource[SyncTransportProtocol]):
     def get_cashprize(self, event_window_id: str, *, fortnite_token: str | None = None) -> list[CashPrizeScoringDto]:
         """Get the payout table for a specific event window.
 
@@ -27,12 +28,13 @@ class TournamentsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/events/cashprize/{event_window_id}",
+            f"/events/cashprize/{path_segment(event_window_id)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[CashPrizeScoringDto],
+            retryable=True,
         )
 
     def get_cashprizes(self, *, fortnite_token: str | None = None) -> dict[str, list[CashPrizeScoringDto]]:
@@ -49,6 +51,7 @@ class TournamentsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=dict[str, list[CashPrizeScoringDto]],
+            retryable=True,
         )
 
     def get_current(self, *, lang: str | None = None, fortnite_token: str | None = None) -> list[GlobalEventDto]:
@@ -64,6 +67,7 @@ class TournamentsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[GlobalEventDto],
+            retryable=True,
         )
 
     def get_global_history(self, *, lang: str | None = None, fortnite_token: str | None = None) -> list[GlobalEventDto]:
@@ -79,6 +83,7 @@ class TournamentsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[GlobalEventDto],
+            retryable=True,
         )
 
     def get_leaderboard(
@@ -111,6 +116,7 @@ class TournamentsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=EventLeaderboardDto,
+            retryable=True,
         )
 
     def get_player(
@@ -134,6 +140,7 @@ class TournamentsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_player_matches(
@@ -159,12 +166,13 @@ class TournamentsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/events/player/{account_id}/matches",
+            f"/events/player/{path_segment(account_id)}/matches",
             "v1",
             params={"after": after, "before": before, "region": region, "platform": platform},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_player_session(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -193,12 +201,13 @@ class TournamentsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/events/player/{account_id}/session",
+            f"/events/player/{path_segment(account_id)}/session",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_player_window_matches(
@@ -220,12 +229,13 @@ class TournamentsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/events/{event_id}/{event_window_id}/player/{account_id}/matches",
+            f"/events/{path_segment(event_id)}/{path_segment(event_window_id)}/player/{path_segment(account_id)}/matches",
             "v1",
             params={"rankHint": rank_hint, "maxPages": max_pages},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=PlayerWindowStandingDto,
+            retryable=True,
         )
 
     def get_scoring(self, *, fortnite_token: str | None = None) -> Any:
@@ -243,6 +253,7 @@ class TournamentsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_window_scoring(self, event_window_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -254,12 +265,13 @@ class TournamentsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/events/scoring/{event_window_id}",
+            f"/events/scoring/{path_segment(event_window_id)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_sessions(self, *, event_id: str | None = None, fortnite_token: str | None = None) -> EventSessionDto:
@@ -275,6 +287,7 @@ class TournamentsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=EventSessionDto,
+            retryable=True,
         )
 
     def get_stat_leaders(
@@ -295,12 +308,13 @@ class TournamentsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/events/stats/{event_id}/{event_window_id}/{stat_key}",
+            f"/events/stats/{path_segment(event_id)}/{path_segment(event_window_id)}/{path_segment(stat_key)}",
             "v1",
             params={"top": top},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=EventStatsLeaderboardDto,
+            retryable=True,
         )
 
     def get_team_stats(
@@ -322,12 +336,13 @@ class TournamentsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/events/stats/{event_id}/{event_window_id}/{stat_key}/{team_identifier}",
+            f"/events/stats/{path_segment(event_id)}/{path_segment(event_window_id)}/{path_segment(stat_key)}/{path_segment(team_identifier)}",
             "v1",
             params={"twitter": twitter},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=TeamEventStatsDto,
+            retryable=True,
         )
 
     def get_tokens(self, team_account_ids: list[str], *, fortnite_token: str | None = None) -> PlayerTokensDto:
@@ -345,6 +360,7 @@ class TournamentsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=PlayerTokensDto,
+            retryable=True,
         )
 
     def get_tracker(
@@ -363,6 +379,7 @@ class TournamentsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_tracker_eligibility(
@@ -392,6 +409,7 @@ class TournamentsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def check_eligibility(
@@ -408,16 +426,17 @@ class TournamentsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/events/tracker/eligibility/{identifier}/{event_id}",
+            f"/events/tracker/eligibility/{path_segment(identifier)}/{path_segment(event_id)}",
             "v1",
             params={"eventWindowId": event_window_id},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=EventTokenEligibilityDto,
+            retryable=True,
         )
 
 
-class AsyncTournamentsResource(Resource[AsyncTransport]):
+class AsyncTournamentsResource(Resource[AsyncTransportProtocol]):
     async def get_cashprize(
         self, event_window_id: str, *, fortnite_token: str | None = None
     ) -> list[CashPrizeScoringDto]:
@@ -427,12 +446,13 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/events/cashprize/{event_window_id}",
+            f"/events/cashprize/{path_segment(event_window_id)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[CashPrizeScoringDto],
+            retryable=True,
         )
 
     async def get_cashprizes(self, *, fortnite_token: str | None = None) -> dict[str, list[CashPrizeScoringDto]]:
@@ -449,6 +469,7 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=dict[str, list[CashPrizeScoringDto]],
+            retryable=True,
         )
 
     async def get_current(self, *, lang: str | None = None, fortnite_token: str | None = None) -> list[GlobalEventDto]:
@@ -464,6 +485,7 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[GlobalEventDto],
+            retryable=True,
         )
 
     async def get_global_history(
@@ -481,6 +503,7 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[GlobalEventDto],
+            retryable=True,
         )
 
     async def get_leaderboard(
@@ -513,6 +536,7 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=EventLeaderboardDto,
+            retryable=True,
         )
 
     async def get_player(
@@ -536,6 +560,7 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_player_matches(
@@ -561,12 +586,13 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/events/player/{account_id}/matches",
+            f"/events/player/{path_segment(account_id)}/matches",
             "v1",
             params={"after": after, "before": before, "region": region, "platform": platform},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_player_session(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -595,12 +621,13 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/events/player/{account_id}/session",
+            f"/events/player/{path_segment(account_id)}/session",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_player_window_matches(
@@ -622,12 +649,13 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/events/{event_id}/{event_window_id}/player/{account_id}/matches",
+            f"/events/{path_segment(event_id)}/{path_segment(event_window_id)}/player/{path_segment(account_id)}/matches",
             "v1",
             params={"rankHint": rank_hint, "maxPages": max_pages},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=PlayerWindowStandingDto,
+            retryable=True,
         )
 
     async def get_scoring(self, *, fortnite_token: str | None = None) -> Any:
@@ -645,6 +673,7 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_window_scoring(self, event_window_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -656,12 +685,13 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/events/scoring/{event_window_id}",
+            f"/events/scoring/{path_segment(event_window_id)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_sessions(self, *, event_id: str | None = None, fortnite_token: str | None = None) -> EventSessionDto:
@@ -677,6 +707,7 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=EventSessionDto,
+            retryable=True,
         )
 
     async def get_stat_leaders(
@@ -697,12 +728,13 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/events/stats/{event_id}/{event_window_id}/{stat_key}",
+            f"/events/stats/{path_segment(event_id)}/{path_segment(event_window_id)}/{path_segment(stat_key)}",
             "v1",
             params={"top": top},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=EventStatsLeaderboardDto,
+            retryable=True,
         )
 
     async def get_team_stats(
@@ -724,12 +756,13 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/events/stats/{event_id}/{event_window_id}/{stat_key}/{team_identifier}",
+            f"/events/stats/{path_segment(event_id)}/{path_segment(event_window_id)}/{path_segment(stat_key)}/{path_segment(team_identifier)}",
             "v1",
             params={"twitter": twitter},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=TeamEventStatsDto,
+            retryable=True,
         )
 
     async def get_tokens(self, team_account_ids: list[str], *, fortnite_token: str | None = None) -> PlayerTokensDto:
@@ -747,6 +780,7 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=PlayerTokensDto,
+            retryable=True,
         )
 
     async def get_tracker(
@@ -765,6 +799,7 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_tracker_eligibility(
@@ -794,6 +829,7 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def check_eligibility(
@@ -810,10 +846,11 @@ class AsyncTournamentsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/events/tracker/eligibility/{identifier}/{event_id}",
+            f"/events/tracker/eligibility/{path_segment(identifier)}/{path_segment(event_id)}",
             "v1",
             params={"eventWindowId": event_window_id},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=EventTokenEligibilityDto,
+            retryable=True,
         )

@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..interpret import path_segment
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class ProfileResource(Resource[SyncTransport]):
+class ProfileResource(Resource[SyncTransportProtocol]):
     def get_leaderboard(
         self,
         game_id: str,
@@ -25,12 +26,13 @@ class ProfileResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "POST",
-            f"/profile/leaderboard/{game_id}",
+            f"/profile/leaderboard/{path_segment(game_id)}",
             "v1",
             params={"accountId": account_id, "fromIndex": from_index, "findTeams": find_teams},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_level(self, *, account_id: str | None = None, fortnite_token: str | None = None) -> Any:
@@ -47,6 +49,7 @@ class ProfileResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_progress(self, *, account_id: str | None = None, fortnite_token: str | None = None) -> Any:
@@ -62,6 +65,7 @@ class ProfileResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_ranked(
@@ -81,6 +85,7 @@ class ProfileResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def bulk_track_progress(self, body: list[str], *, fortnite_token: str | None = None) -> Any:
@@ -97,6 +102,7 @@ class ProfileResource(Resource[SyncTransport]):
             json_body=body,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_tracks(
@@ -115,10 +121,11 @@ class ProfileResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
 
-class AsyncProfileResource(Resource[AsyncTransport]):
+class AsyncProfileResource(Resource[AsyncTransportProtocol]):
     async def get_leaderboard(
         self,
         game_id: str,
@@ -135,12 +142,13 @@ class AsyncProfileResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "POST",
-            f"/profile/leaderboard/{game_id}",
+            f"/profile/leaderboard/{path_segment(game_id)}",
             "v1",
             params={"accountId": account_id, "fromIndex": from_index, "findTeams": find_teams},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_level(self, *, account_id: str | None = None, fortnite_token: str | None = None) -> Any:
@@ -157,6 +165,7 @@ class AsyncProfileResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_progress(self, *, account_id: str | None = None, fortnite_token: str | None = None) -> Any:
@@ -172,6 +181,7 @@ class AsyncProfileResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_ranked(
@@ -191,6 +201,7 @@ class AsyncProfileResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def bulk_track_progress(self, body: list[str], *, fortnite_token: str | None = None) -> Any:
@@ -207,6 +218,7 @@ class AsyncProfileResource(Resource[AsyncTransport]):
             json_body=body,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_tracks(
@@ -225,4 +237,5 @@ class AsyncProfileResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )

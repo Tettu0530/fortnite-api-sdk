@@ -65,7 +65,10 @@ All examples below use the sync client; prefix calls with `await` for the async 
 - ✅ Typed Pydantic responses for most endpoints (every endpoint whose OpenAPI 200 response declares a schema); raw JSON for the rest
 - ✅ Request bodies accept either the Pydantic request model or a plain `dict`
 - ✅ `DeprecationWarning` for endpoints the API marks as deprecated
-- ✅ Automatic error handling with a single `FortniteAPIError` (status + message + body)
+- ✅ Typed exception hierarchy under `FortniteAPIError` (`AuthError`, `RateLimitError`, `ServerError`, ...)
+- ✅ Safe by default: redirects are not followed, path parameters are URL-encoded, credentials never appear in reprs or errors
+- ✅ Opt-in retries with backoff for idempotent requests (`RetryConfig`)
+- ✅ Pluggable transports (`transport=`) with a public protocol and reusable response interpretation
 - ✅ Support for all Fortnite API endpoints (26 resources, 146 methods + `health()` / `health_version()`)
 - ✅ Built-in OAuth flow helpers
 - ✅ Optional per-call user token (`x-fortnite-token`)
@@ -730,16 +733,229 @@ warnings.simplefilter("error", DeprecationWarning)
 
 ### Error Handling
 
+Every error derives from `FortniteAPIError` (`status`, `message`, `data`), so a single `except`
+still catches everything. Catch a subclass to react to a specific failure:
+
+| Condition | Exception | Notes |
+|---|---|---|
+| 3xx response | `RedirectError` | `location` holds the `Location` header |
+| 401 | `AuthError` | subclass of `ClientError` |
+| 403 | `PlanRequiredError` | subclass of `ClientError` |
+| 404 | `NotFoundError` | subclass of `ClientError` |
+| 429 | `RateLimitError` | subclass of `ClientError`; `retry_after` in seconds (from `Retry-After`) or `None`; **not capped**, clamp it before sleeping |
+| other 4xx | `ClientError` | |
+| 5xx | `ServerError` | |
+| 2xx with `{"success": false}` | `UnsuccessfulResponseError` | `status` is the real HTTP status |
+| 2xx with a non-JSON body | `DecodeError` | `data` is the body text (max. 1000 chars) |
+| 2xx not matching the model | `ValidationError` | `validation_error` / `__cause__` is the `pydantic.ValidationError` |
+| connection failure | `APIConnectionError` | `status == 0` (`fortnite_api.NETWORK_ERROR_STATUS`), the httpx error is the `__cause__` |
+| timeout | `APITimeoutError` | subclass of `APIConnectionError`, `status == 0` |
+
 ```python
-from fortnite_api import FortniteAPIError
+from fortnite_api import FortniteAPIError, NotFoundError, RateLimitError
 
 try:
     shop = client.shop.get_current()
+except RateLimitError as error:
+    print("Retry in", min(error.retry_after or 10, 60), "seconds")  # retry_after is the raw server value
+except NotFoundError:
+    print("Not found")
 except FortniteAPIError as error:
     print("API Error:", error.message)
     print("Status Code:", error.status)
-    print("Details:", error.data)   # raw error body
+    print("Details:", error.data)   # response body, never request headers
 ```
+
+Exceptions and `repr()` of clients and transports never contain the API key or the user token.
+Connection errors only name the exception type (httpx/h11 messages can echo header values), and the
+credential headers of the request attached to `__cause__` (`__cause__.request.headers`) are masked
+as `***`. An API key or token that is not printable ASCII or has leading/trailing whitespace (e.g.
+a trailing newline read from a file) raises `ValueError` before anything is sent; the message
+never includes the value.
+
+### Retries
+
+Retries are disabled by default. Pass a `RetryConfig` to retry idempotent requests (the `GET`
+endpoints and the read-only bulk lookups `account.bulk_external_display_names`, `account.bulk_external_ids`,
+`stats.get_bulk`, `profile.bulk_track_progress` and `profile.get_leaderboard`) after a 429 or 5xx
+response, a connection error or a timeout:
+
+```python
+from fortnite_api import FortniteAPI, RetryConfig
+
+client = FortniteAPI(
+    api_key="your-api-key",
+    retry=RetryConfig(max_retries=3, backoff_base=0.5, backoff_max=8.0, jitter=True, max_retry_after=60.0),
+)
+```
+
+The wait honours `Retry-After` (capped at `max_retry_after`); otherwise it is an exponential backoff
+(`backoff_base * 2**attempt`, capped at `backoff_max`) with optional jitter. When all retries fail,
+the last error is raised. Other `POST`, `DELETE` and multipart (`parsing.*`) requests are never
+retried, and neither are two kinds of `GET`: the `replays.parse*` endpoints (every attempt
+consumes parsing credits) and `oauth.get_token` (every call starts a new device-code flow).
+
+Custom transports can reuse the same decision with
+`RetryConfig.next_delay(attempt, retryable=..., status=..., headers=...)`, which returns the seconds
+to wait or `None` (`status=None` means a connection error or timeout).
+
+### Redirects
+
+Redirects are **not** followed: a 3xx response raises `RedirectError`, because the `x-api-key` and
+`x-fortnite-token` headers would otherwise be re-sent to the redirect target. If you need to follow
+them, pass `follow_redirects=True` (optionally with `max_redirects=`, default 5); credentials are
+then only re-sent when scheme, host and port stay the same. `map.get_image()` always returns the
+redirect target without following it.
+
+```python
+from fortnite_api import FortniteAPI, RedirectError
+
+try:
+    client.shop.get_current()
+except RedirectError as error:
+    print("Redirected to", error.location)
+
+following = FortniteAPI(api_key="your-api-key", follow_redirects=True, max_redirects=3)
+```
+
+### User-Agent
+
+Requests are sent with `User-Agent: fortnite-api-sdk/<version> python-httpx/<version>`. Override it
+with `FortniteAPI(api_key=..., user_agent="my-app/1.0")`.
+
+### Custom Transports
+
+`FortniteAPI(transport=...)` and `AsyncFortniteAPI(transport=...)` accept any object implementing
+`fortnite_api.SyncTransportProtocol` / `fortnite_api.AsyncTransportProtocol` (`request`,
+`request_binary`, `request_redirect` and `request_multipart`). Settings such as the API key are
+then configured on the transport, so `api_key=` and the other options must be omitted, and
+`close()` leaves the injected transport open.
+
+The functions in `fortnite_api.interpret` build URLs, headers and bodies and turn a status code,
+headers and body into the same results and exceptions as the built-in transport, e.g.
+`interpret.interpret_json(status, headers, body, response_type)`. See
+[`examples/custom_transport.py`](examples/custom_transport.py) for a complete async transport with
+an endpoint allowlist and a request counter. The core of a transport looks like this:
+
+```python
+from typing import Any
+
+import httpx
+
+from fortnite_api import APIConnectionError, APITimeoutError, AsyncFortniteAPI, interpret
+
+
+class MyTransport:
+    def __init__(self, api_key: str, http: httpx.AsyncClient) -> None:
+        self._api_key = api_key
+        self._http = http
+
+    async def request(self, method, path, version, *, params=None, json_body=None,
+                      fortnite_token=None, response_type=None, retryable=False) -> Any:
+        try:
+            resp = await self._http.request(
+                method,
+                interpret.build_url(interpret.DEFAULT_BASE_URL, path, version),
+                params=interpret.clean_params(params),
+                json=interpret.serialize_body(json_body),
+                headers=interpret.build_headers(self._api_key, fortnite_token),
+                follow_redirects=False,  # never re-send the key to a redirect target
+            )
+        except httpx.TimeoutException as exc:
+            raise APITimeoutError(f"Request timed out ({type(exc).__name__})") from exc
+        except httpx.TransportError as exc:
+            raise APIConnectionError(f"Connection failed ({type(exc).__name__})") from exc
+        return interpret.interpret_json(resp.status_code, resp.headers, resp.content, response_type)
+
+    # request_binary, request_redirect and request_multipart follow the same pattern
+    # (see examples/custom_transport.py).
+
+
+client = AsyncFortniteAPI(transport=MyTransport("your-api-key", httpx.AsyncClient()))
+```
+
+The protocol methods and their exact parameters are:
+
+| Method | Signature |
+|---|---|
+| `request` | `(method, path, version, *, params=None, json_body=None, fortnite_token=None, response_type=None, retryable=False)` |
+| `request_binary` | `(path, version, *, fortnite_token=None) -> bytes` |
+| `request_redirect` | `(path, version, *, params=None, fortnite_token=None) -> str \| None` |
+| `request_multipart` | `(path, files, *, response_type=None, unwrap=True)` |
+
+A complete transport must implement all four methods. `retryable=True` marks requests that are
+safe to retry (GETs except `replays.parse*` and `oauth.get_token`, plus the read-only bulk
+lookups), so a transport with its own retry logic can honour it, e.g. with
+`RetryConfig.next_delay()`. `interpret.build_headers()` always sets `User-Agent`: the value of
+`user_agent=` if given, otherwise `fortnite-api-sdk/<version>` (without the `python-httpx` suffix
+the built-in transport adds). It also validates the API key and token (`ValueError` without
+echoing them).
+
+Rules for a safe transport:
+
+- **Never follow redirects automatically.** httpx (`follow_redirects=True`) and **aiohttp** (whose
+  default is `allow_redirects=True`) both re-send custom headers such as `x-api-key` and
+  `x-fortnite-token` to a redirect target on another host, which reintroduces the key leak that
+  0.3.0 fixes. With aiohttp pass `allow_redirects=False` on every request, and with httpx
+  `follow_redirects=False`. Hand 3xx responses to `interpret.interpret_json()` /
+  `interpret_binary()`, which raise `RedirectError`; `request_redirect` must return the `Location`
+  via `interpret.interpret_redirect()` without following it. If you follow redirects on purpose,
+  send only `interpret.redirect_headers(headers, from_url, to_url)` to each hop (credentials are
+  kept for the same scheme, host and port only; see also `interpret.is_same_origin()`) and cap
+  the number of hops.
+- **Raise the SDK's network errors.** Map connection failures to `APIConnectionError` and
+  timeouts to `APITimeoutError` with `raise ... from exc` (aiohttp: `aiohttp.ClientError` and
+  `asyncio.TimeoutError`), so callers catching `FortniteAPIError` keep working. Do not copy the
+  original error text into the message: HTTP libraries may echo header values in it.
+- **Match sync and async.** `FortniteAPI` needs a plain `def request()` and `AsyncFortniteAPI` an
+  `async def request()`; a mismatch raises `TypeError` when the client is created
+  (`isinstance(..., AsyncTransportProtocol)` cannot tell them apart).
+
+---
+
+## ⬆️ Migrating from 0.2.x
+
+Version 0.3.0 hardens the transport and adds pluggable transports. Please review the following
+changes when upgrading.
+
+### Breaking changes
+
+- **Redirects are no longer followed.** A 3xx response now raises `RedirectError`. Pass
+  `follow_redirects=True` to follow them (credentials are only re-sent to the same origin).
+- **Specific exception classes.** Errors are now raised as subclasses of `FortniteAPIError`
+  (see [Error Handling](#error-handling)). Code that catches `FortniteAPIError` keeps working;
+  code that checks `type(error) is FortniteAPIError` must be updated.
+- **Network errors are wrapped.** Connection errors and timeouts raise `APIConnectionError` /
+  `APITimeoutError` (`status == 0`) instead of `httpx` exceptions. The original exception is
+  available as `__cause__`.
+- **`{"success": false}` responses keep their real status.** They raise
+  `UnsuccessfulResponseError` with the actual HTTP status (usually 200) instead of a synthetic 422.
+- **Invalid response bodies** raise `DecodeError` (not JSON) or `ValidationError` (does not match
+  the model) instead of `json.JSONDecodeError` / `pydantic.ValidationError`. An empty 2xx body now
+  returns `None`.
+- **Path parameters are URL-encoded** as a single path segment (`/`, `?`, `#`, `%`, spaces...).
+  Values that were previously passed pre-encoded (e.g. `"a%2Fb"`) are now encoded again. Empty path
+  parameters raise `ValueError`.
+- **Client constructor.** All arguments except `api_key` are keyword-only (as before) and now
+  default to `None`; `api_key` may be omitted only when `transport=` is given.
+- **Internal transport attributes.** The private helpers `_BaseTransport._parse`, `_unwrap`,
+  `_body`, `_file_tuple`, `_clean` and `_error` were replaced by the public
+  `fortnite_api.interpret` module, and `SyncTransport.api_key` / `fortnite_token` are no longer
+  public attributes.
+- **User-Agent.** Requests now identify as `fortnite-api-sdk/<version>`.
+- **Credential validation.** An `api_key` or `fortnite_token` that is not printable ASCII or has
+  leading/trailing whitespace (e.g. a trailing newline read from a file) now raises `ValueError`
+  instead of failing inside httpx with a message that contained the value.
+
+### New in 0.3.0
+
+- `RetryConfig` for opt-in retries of idempotent requests
+- `transport=` with `SyncTransportProtocol` / `AsyncTransportProtocol`, the `fortnite_api.interpret`
+  module and `examples/custom_transport.py`
+- `client.transport` property and `user_agent=`, `follow_redirects=`, `max_redirects=` options
+- `RetryConfig.next_delay()` and `interpret.parse_retry_after(..., max_seconds=)` for custom
+  retry logic
+- `SyncTransport` / `AsyncTransport` are exported and can be used as context managers
 
 ---
 

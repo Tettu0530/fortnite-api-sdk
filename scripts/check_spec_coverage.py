@@ -32,7 +32,7 @@ from typing import Any
 
 import httpx
 
-from fortnite_api import AsyncFortniteAPI, FortniteAPI
+from fortnite_api import AsyncFortniteAPI, AsyncTransport, FortniteAPI, SyncTransport
 from fortnite_api.resources._base import Resource
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -206,11 +206,12 @@ def _finish(
 
 def record_sync(gaps: list[str]) -> dict[str, Call]:
     recorder = _Recorder()
-    client = FortniteAPI("key")
-    client._t._client.close()
-    client._t._client = httpx.Client(transport=httpx.MockTransport(recorder))
+    transport = SyncTransport("key")
+    transport._client.close()
+    transport._client = httpx.Client(transport=httpx.MockTransport(recorder))
+    client = FortniteAPI(transport=transport)
     calls: dict[str, Call] = {}
-    with client:
+    with transport:
         for name, method in public_methods(client):
             call = _invoke(name, method, recorder, gaps)
             if call is not None:
@@ -220,11 +221,12 @@ def record_sync(gaps: list[str]) -> dict[str, Call]:
 
 async def _record_async(gaps: list[str]) -> dict[str, Call]:
     recorder = _Recorder()
-    client = AsyncFortniteAPI("key")
-    await client._t._client.aclose()
-    client._t._client = httpx.AsyncClient(transport=httpx.MockTransport(recorder))
+    transport = AsyncTransport("key")
+    await transport._client.aclose()
+    transport._client = httpx.AsyncClient(transport=httpx.MockTransport(recorder))
+    client = AsyncFortniteAPI(transport=transport)
     calls: dict[str, Call] = {}
-    async with client:
+    async with transport:
         for name, method in public_methods(client):
             signature = inspect.signature(method)
             args, kwargs = call_args(signature)

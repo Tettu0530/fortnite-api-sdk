@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
 from ..models import (
     CompleteOAuthRequest,
     ExchangeCodeRequest,
@@ -12,10 +11,11 @@ from ..models import (
     RefreshDeviceRequest,
     RefreshTokenRequest,
 )
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class OAuthResource(Resource[SyncTransport]):
+class OAuthResource(Resource[SyncTransportProtocol]):
     def get_authorize_url(self, *, redirect_uri: str | None = None, fortnite_token: str | None = None) -> Any:
         """Returns the Epic Games authorization URL to redirect the user to. The user will see Epic's standard
         login page — no scary device confirmation page. After login, Epic redirects to your redirect_uri
@@ -32,6 +32,7 @@ class OAuthResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def complete(self, body: CompleteOAuthRequest | dict[str, Any], *, fortnite_token: str | None = None) -> Any:
@@ -145,7 +146,7 @@ class OAuthResource(Resource[SyncTransport]):
         )
 
 
-class AsyncOAuthResource(Resource[AsyncTransport]):
+class AsyncOAuthResource(Resource[AsyncTransportProtocol]):
     async def get_authorize_url(self, *, redirect_uri: str | None = None, fortnite_token: str | None = None) -> Any:
         """Returns the Epic Games authorization URL to redirect the user to. The user will see Epic's standard
         login page — no scary device confirmation page. After login, Epic redirects to your redirect_uri
@@ -162,6 +163,7 @@ class AsyncOAuthResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def complete(self, body: CompleteOAuthRequest | dict[str, Any], *, fortnite_token: str | None = None) -> Any:

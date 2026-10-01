@@ -4,18 +4,25 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class CrewResource(Resource[SyncTransport]):
+class CrewResource(Resource[SyncTransportProtocol]):
     def get_current(self, *, fortnite_token: str | None = None) -> Any:
         """Get the current Fortnite Crew pack.
 
         ``GET /api/v1/crew/current``
         """
         return self._t.request(
-            "GET", "/crew/current", "v1", params=None, json_body=None, fortnite_token=fortnite_token, response_type=None
+            "GET",
+            "/crew/current",
+            "v1",
+            params=None,
+            json_body=None,
+            fortnite_token=fortnite_token,
+            response_type=None,
+            retryable=True,
         )
 
     def get_history(self, *, fortnite_token: str | None = None) -> Any:
@@ -24,18 +31,32 @@ class CrewResource(Resource[SyncTransport]):
         ``GET /api/v1/crew/history``
         """
         return self._t.request(
-            "GET", "/crew/history", "v1", params=None, json_body=None, fortnite_token=fortnite_token, response_type=None
+            "GET",
+            "/crew/history",
+            "v1",
+            params=None,
+            json_body=None,
+            fortnite_token=fortnite_token,
+            response_type=None,
+            retryable=True,
         )
 
 
-class AsyncCrewResource(Resource[AsyncTransport]):
+class AsyncCrewResource(Resource[AsyncTransportProtocol]):
     async def get_current(self, *, fortnite_token: str | None = None) -> Any:
         """Get the current Fortnite Crew pack.
 
         ``GET /api/v1/crew/current``
         """
         return await self._t.request(
-            "GET", "/crew/current", "v1", params=None, json_body=None, fortnite_token=fortnite_token, response_type=None
+            "GET",
+            "/crew/current",
+            "v1",
+            params=None,
+            json_body=None,
+            fortnite_token=fortnite_token,
+            response_type=None,
+            retryable=True,
         )
 
     async def get_history(self, *, fortnite_token: str | None = None) -> Any:
@@ -44,5 +65,12 @@ class AsyncCrewResource(Resource[AsyncTransport]):
         ``GET /api/v1/crew/history``
         """
         return await self._t.request(
-            "GET", "/crew/history", "v1", params=None, json_body=None, fortnite_token=fortnite_token, response_type=None
+            "GET",
+            "/crew/history",
+            "v1",
+            params=None,
+            json_body=None,
+            fortnite_token=fortnite_token,
+            response_type=None,
+            retryable=True,
         )

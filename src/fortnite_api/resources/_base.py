@@ -4,13 +4,17 @@ from __future__ import annotations
 
 from typing import Generic, TypeVar
 
-from .._transport import AsyncTransport, SyncTransport
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 
-TransportT = TypeVar("TransportT", SyncTransport, AsyncTransport)
+TransportT = TypeVar("TransportT", SyncTransportProtocol, AsyncTransportProtocol)
 
 
 class Resource(Generic[TransportT]):
-    """A group of endpoints bound to a :class:`SyncTransport` or :class:`AsyncTransport`."""
+    """A group of endpoints bound to a sync or async transport (see :mod:`fortnite_api.protocol`).
+
+    Resources only call the protocol methods and :mod:`fortnite_api.interpret` helpers, never
+    private attributes of the built-in transports, so any conforming transport works.
+    """
 
     def __init__(self, transport: TransportT) -> None:
         self._t: TransportT = transport

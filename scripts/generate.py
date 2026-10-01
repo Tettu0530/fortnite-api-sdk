@@ -39,6 +39,15 @@ def snake(name: str) -> str:
 
 PY_PRIMITIVE = {"string": "str", "integer": "int", "number": "float", "boolean": "bool"}
 
+# Fields whose live responses do not match the spec, verified against the production API.
+# (schema, property) -> Python annotation used instead of the spec type (``| None`` is added).
+FIELD_OVERRIDES: dict[tuple[str, str], str] = {
+    # Spec: string. Live: an object such as {"type": "br:tournament", "code": "..."}.
+    ("EpicEventDto", "link"): "str | dict[str, Any]",
+    # Spec: int32. Live: fractional thresholds also occur.
+    ("CashPrizeRankDto", "threshold"): "float",
+}
+
 
 def model_type(schema: dict[str, Any]) -> str:
     if "$ref" in schema:
@@ -75,6 +84,9 @@ def gen_models() -> str:
         "",
     ]
     names = list(schemas)
+    for schema_name, prop_name in FIELD_OVERRIDES:
+        if prop_name not in (schemas.get(schema_name, {}).get("properties") or {}):
+            raise SystemExit(f"FIELD_OVERRIDES: {schema_name}.{prop_name} is not in the spec")
     for name in names:
         schema = schemas[name]
         props = schema.get("properties") or {}
@@ -85,7 +97,7 @@ def gen_models() -> str:
             continue
         for prop, pschema in props.items():
             py = snake(prop)
-            ann = f"{model_type(pschema)} | None"
+            ann = f"{FIELD_OVERRIDES.get((name, prop)) or model_type(pschema)} | None"
             if py != prop:
                 lines.append(f'    {py}: {ann} = Field(default=None, alias="{prop}")')
             else:
@@ -212,7 +224,13 @@ def ep(
     kind: str = "json",
     in_spec: bool = True,
     deprecated_hint: str | None = None,
+    read_only: bool = False,
+    costly: bool = False,
 ) -> Endpoint:
+    if read_only and http == "GET":
+        raise SystemExit(f"endpoint {name}: read_only is implied for GET")
+    if costly and http != "GET":
+        raise SystemExit(f"endpoint {name}: costly only applies to GET (other methods are not retried)")
     return {
         "name": name,
         "http": http,
@@ -225,6 +243,8 @@ def ep(
         "kind": kind,
         "in_spec": in_spec,
         "deprecated_hint": deprecated_hint,
+        "read_only": read_only,
+        "costly": costly,
     }
 
 
@@ -289,7 +309,15 @@ def is_deprecated(e: Endpoint) -> bool:
 
 
 def py_path(path: str) -> str:
-    return PATH_RE.sub(lambda m: "{" + snake(m.group(1)) + "}", path)
+    """The f-string body of ``path`` with every parameter percent-encoded as one path segment."""
+    return PATH_RE.sub(lambda m: "{path_segment(" + snake(m.group(1)) + ")}", path)
+
+
+def is_retryable(e: Endpoint) -> bool:
+    """GETs (unless ``costly``) and read-only POST lookups can be retried safely (no side effects)."""
+    if e["http"] == "GET":
+        return not e["costly"]
+    return bool(e["read_only"])
 
 
 def build_method(e: Endpoint, is_async: bool, attr: str) -> str:
@@ -366,6 +394,7 @@ def build_method(e: Endpoint, is_async: bool, attr: str) -> str:
     else:
         params_expr = "None"
     rt_expr = rtype or "None"
+    retry_arg = ", retryable=True" if is_retryable(e) else ""
 
     if e["kind"] == "binary":
         call = f"self._t.request_binary({path_expr}, {version_expr}, fortnite_token=fortnite_token)"
@@ -377,13 +406,13 @@ def build_method(e: Endpoint, is_async: bool, attr: str) -> str:
         ]
     elif e["kind"] == "multipart":
         body_lines = [
-            '        payload = {"file": self._t._file_tuple(file, filename)}',
+            '        payload = {"file": file_tuple(file, filename)}',
             f"        return {await_kw}self._t.request_multipart({path_expr}, payload, response_type={rt_expr})",
         ]
     elif e["kind"] == "multipart_multi":
         body_lines = [
             "        payload = [",
-            '            ("files", self._t._file_tuple(f, filenames[i] if filenames else None))',
+            '            ("files", file_tuple(f, filenames[i] if filenames else None))',
             "            for i, f in enumerate(files)",
             "        ]",
             f"        return {await_kw}self._t.request_multipart({path_expr}, payload, response_type={rt_expr})",
@@ -393,7 +422,7 @@ def build_method(e: Endpoint, is_async: bool, attr: str) -> str:
         body_lines = [
             f'        return {await_kw}self._t.request("{e["http"]}", {path_expr}, {version_expr},',
             f"            params={params_expr}, json_body={body_expr}, fortnite_token=fortnite_token,",
-            f"            response_type={rt_expr})",
+            f"            response_type={rt_expr}{retry_arg})",
         ]
 
     return "\n".join([head, *doc, *warn_lines, *body_lines])
@@ -419,16 +448,22 @@ def gen_resource_file(attr: str, prefix: str, endpoints: list[Endpoint]) -> str:
         header.append("from typing import Any")
     if has_deprecated or uses_any:
         header.append("")
-    transport_names = ["AsyncTransport", *(["FileInput"] if has_multipart else []), "SyncTransport"]
-    header.append(f"from .._transport import {', '.join(transport_names)}")
+    uses_path = any("{" in e["path"] for e in endpoints)
+    interpret_names = [
+        *(["FileInput", "file_tuple"] if has_multipart else []),
+        *(["path_segment"] if uses_path else []),
+    ]
+    if interpret_names:
+        header.append(f"from ..interpret import {', '.join(interpret_names)}")
     if models_used:
         header.append(f"from ..models import {', '.join(models_used)}")
+    header.append("from ..protocol import AsyncTransportProtocol, SyncTransportProtocol")
     header += ["from ._base import Resource", "", ""]
 
     blocks = []
     for is_async in (False, True):
         cls = f"Async{prefix}Resource" if is_async else f"{prefix}Resource"
-        transport = "AsyncTransport" if is_async else "SyncTransport"
+        transport = "AsyncTransportProtocol" if is_async else "SyncTransportProtocol"
         methods = "\n\n".join(build_method(e, is_async, attr) for e in endpoints)
         blocks.append(f"class {cls}(Resource[{transport}]):\n{methods}\n")
 
@@ -441,13 +476,17 @@ from __future__ import annotations
 
 from typing import Generic, TypeVar
 
-from .._transport import AsyncTransport, SyncTransport
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 
-TransportT = TypeVar("TransportT", SyncTransport, AsyncTransport)
+TransportT = TypeVar("TransportT", SyncTransportProtocol, AsyncTransportProtocol)
 
 
 class Resource(Generic[TransportT]):
-    """A group of endpoints bound to a :class:`SyncTransport` or :class:`AsyncTransport`."""
+    """A group of endpoints bound to a sync or async transport (see :mod:`fortnite_api.protocol`).
+
+    Resources only call the protocol methods and :mod:`fortnite_api.interpret` helpers, never
+    private attributes of the built-in transports, so any conforming transport works.
+    """
 
     def __init__(self, transport: TransportT) -> None:
         self._t: TransportT = transport
@@ -469,6 +508,15 @@ def format_generated(paths: list[Path]) -> None:
 # Query parameters are taken from the spec automatically; ``query=`` only overrides
 # (name, required, kind, py_name) for individual parameters. Response types are derived
 # from the spec's 200 schema unless ``ret=`` is given; request bodies from ``requestBody``.
+#
+# ``read_only=True`` marks POST operations that only look data up (bulk lookups whose body is
+# just the list of IDs to fetch): like every GET they are sent with ``retryable=True`` and may be
+# retried by a transport configured with a RetryConfig. POSTs that change state, start flows,
+# consume parsing quota (``/parsing*``) or touch OAuth/device credentials stay non-retryable.
+#
+# ``costly=True`` marks GETs that must not be repeated automatically either: the
+# ``/replays/{matchId}/parse*`` endpoints (each call consumes parsing credits) and
+# ``/oauth/get-token`` (every call starts a new device-code flow).
 RESOURCES: dict[str, tuple[str, list[Endpoint]]] = {
     "account": (
         "Account",
@@ -477,8 +525,8 @@ RESOURCES: dict[str, tuple[str, list[Endpoint]]] = {
             ep("get_bulk", "GET", "/account/bulk", "v1", query=[("accountId", True, "list", "account_ids")]),
             ep("get_by_display_name", "GET", "/account/displayName/{displayName}", "v1"),
             ep("get_display_names", "GET", "/account/displaynames", "v1", query=[("ids", True, "csv", "account_ids")]),
-            ep("bulk_external_display_names", "POST", "/account/external/displayNames/bulk", "v1"),
-            ep("bulk_external_ids", "POST", "/account/external/ids/bulk", "v1"),
+            ep("bulk_external_display_names", "POST", "/account/external/displayNames/bulk", "v1", read_only=True),
+            ep("bulk_external_ids", "POST", "/account/external/ids/bulk", "v1", read_only=True),
             ep(
                 "get_by_external_display_name",
                 "GET",
@@ -630,7 +678,7 @@ RESOURCES: dict[str, tuple[str, list[Endpoint]]] = {
             ep("get_authorize_url", "GET", "/oauth/authorize-url", "v1"),
             ep("complete", "POST", "/oauth/complete", "v1"),
             ep("exchange_code", "POST", "/oauth/exchange-code", "v1"),
-            ep("get_token", "GET", "/oauth/get-token", "v1"),
+            ep("get_token", "GET", "/oauth/get-token", "v1", costly=True),
             ep("link", "POST", "/oauth/link", "v1"),
             ep("refresh_device", "POST", "/oauth/refresh-device", "v1"),
             ep("refresh_token", "POST", "/oauth/refresh-token", "v1"),
@@ -675,11 +723,11 @@ RESOURCES: dict[str, tuple[str, list[Endpoint]]] = {
     "profile": (
         "Profile",
         [
-            ep("get_leaderboard", "POST", "/profile/leaderboard/{gameId}", "v1"),
+            ep("get_leaderboard", "POST", "/profile/leaderboard/{gameId}", "v1", read_only=True),
             ep("get_level", "GET", "/profile/level", "v1"),
             ep("get_progress", "GET", "/profile/progress", "v1"),
             ep("get_ranked", "GET", "/profile/ranked", "v1"),
-            ep("bulk_track_progress", "POST", "/profile/trackprogress/bulk", "v1"),
+            ep("bulk_track_progress", "POST", "/profile/trackprogress/bulk", "v1", read_only=True),
             ep("get_tracks", "GET", "/profile/tracks", "v1"),
         ],
     ),
@@ -696,21 +744,22 @@ RESOURCES: dict[str, tuple[str, list[Endpoint]]] = {
         [
             ep("download", "GET", "/replays/{matchId}", "v1", kind="binary"),
             ep("get_metadata", "GET", "/replays/{matchId}/metadata", "v1"),
-            ep("parse", "GET", "/replays/{matchId}/parse", "v1"),
+            ep("parse", "GET", "/replays/{matchId}/parse", "v1", costly=True),
             ep(
                 "parse_broadcast",
                 "GET",
                 "/replays/{matchId}/parse/broadcast",
                 "v1",
+                costly=True,
                 deprecated_hint="Use replays.parse() or the individual parse_* methods instead.",
             ),
-            ep("parse_lobby", "GET", "/replays/{matchId}/parse/lobby", "v1"),
-            ep("parse_loot", "GET", "/replays/{matchId}/parse/loot", "v1"),
-            ep("parse_map", "GET", "/replays/{matchId}/parse/map", "v1"),
-            ep("parse_stats", "GET", "/replays/{matchId}/parse/stats", "v1"),
-            ep("parse_timeline", "GET", "/replays/{matchId}/parse/timeline", "v1"),
-            ep("parse_tracks", "GET", "/replays/{matchId}/parse/tracks", "v1"),
-            ep("parse_zones", "GET", "/replays/{matchId}/parse/zones", "v1"),
+            ep("parse_lobby", "GET", "/replays/{matchId}/parse/lobby", "v1", costly=True),
+            ep("parse_loot", "GET", "/replays/{matchId}/parse/loot", "v1", costly=True),
+            ep("parse_map", "GET", "/replays/{matchId}/parse/map", "v1", costly=True),
+            ep("parse_stats", "GET", "/replays/{matchId}/parse/stats", "v1", costly=True),
+            ep("parse_timeline", "GET", "/replays/{matchId}/parse/timeline", "v1", costly=True),
+            ep("parse_tracks", "GET", "/replays/{matchId}/parse/tracks", "v1", costly=True),
+            ep("parse_zones", "GET", "/replays/{matchId}/parse/zones", "v1", costly=True),
         ],
     ),
     "shop": (
@@ -737,7 +786,7 @@ RESOURCES: dict[str, tuple[str, list[Endpoint]]] = {
     "stats": (
         "Stats",
         [
-            ep("get_bulk", "POST", "/stats/bulk", "v2"),
+            ep("get_bulk", "POST", "/stats/bulk", "v2", read_only=True),
             ep("get_leaderboard", "GET", "/stats/leaderboard/{stat}", "v2"),
             ep("get", "GET", "/stats/{accountId}", "v2"),
         ],
@@ -796,6 +845,37 @@ def gen_resources_init() -> str:
     return "\n".join(lines)
 
 
+CLIENT_HELPERS = '''
+def _built_in_options(
+    transport: object,
+    api_key: str | None,
+    options: dict[str, object],
+) -> dict[str, Any]:
+    """Validate the constructor arguments and return the options for a built-in transport."""
+    given = sorted(name for name, value in options.items() if value is not None)
+    if transport is not None:
+        if api_key is not None or given:
+            names = ", ".join(["api_key", *given] if api_key is not None else given)
+            raise ValueError(f"configure {names} on the transport instead of passing them with transport=")
+        return {}
+    if not api_key:
+        raise ValueError("api_key is required (or pass transport=)")
+    return {name: value for name, value in options.items() if value is not None}
+
+
+def _check_transport(transport: object, *, is_async: bool) -> None:
+    """Reject a sync transport given to the async client and vice versa (``isinstance`` cannot tell)."""
+    request = getattr(transport, "request", None)
+    if not callable(request) or inspect.iscoroutinefunction(request) is not is_async:
+        client, expected, kind = (
+            ("AsyncFortniteAPI", "AsyncTransportProtocol", "an async def request()")
+            if is_async
+            else ("FortniteAPI", "SyncTransportProtocol", "a plain def request()")
+        )
+        raise TypeError(f"{client}(transport=...) needs a {expected} implementation with {kind}")
+'''
+
+
 def gen_client() -> str:
     imports = "\n".join(f"    {prefix}Resource,\n    Async{prefix}Resource," for prefix, _ in RESOURCES.values())
     lines = [
@@ -803,12 +883,21 @@ def gen_client() -> str:
         "",
         "from __future__ import annotations",
         "",
+        "import inspect",
         "from typing import Any",
         "",
-        "from ._transport import DEFAULT_BASE_URL, AsyncTransport, SyncTransport",
+        "from ._transport import AsyncTransport, SyncTransport",
+        "from .interpret import DEFAULT_BASE_URL",
+        "from .protocol import AsyncTransportProtocol, SyncTransportProtocol",
         "from .resources import (",
         imports,
         ")",
+        "from .retry import RetryConfig",
+        "",
+        '__all__ = ["DEFAULT_BASE_URL", "AsyncFortniteAPI", "FortniteAPI"]',
+        "",
+        "",
+        CLIENT_HELPERS.strip("\n"),
         "",
         "",
     ]
@@ -816,56 +905,98 @@ def gen_client() -> str:
     def client_class(is_async: bool) -> str:
         cls = "AsyncFortniteAPI" if is_async else "FortniteAPI"
         transport = "AsyncTransport" if is_async else "SyncTransport"
-        body = [f"class {cls}:"]
-        body.append('    """Client for the Fortnite API (https://api-fortnite.com)."""')
-        body.append("")
-        body.append("    def __init__(")
-        body.append("        self,")
-        body.append("        api_key: str,")
-        body.append("        *,")
-        body.append("        base_url: str = DEFAULT_BASE_URL,")
-        body.append("        timeout: float = 30.0,")
-        body.append("        fortnite_token: str | None = None,")
-        body.append("    ) -> None:")
-        body.append(f"        self._t = {transport}(api_key, base_url, timeout, fortnite_token)")
+        proto = "AsyncTransportProtocol" if is_async else "SyncTransportProtocol"
+        a, aw = ("async ", "await ") if is_async else ("", "")
+        body = [
+            f"class {cls}:",
+            '    """Client for the Fortnite API (https://api-fortnite.com).',
+            "",
+            "    Pass ``api_key`` (plus optional settings) to use the built-in httpx transport, or",
+            f"    ``transport=`` any object implementing :class:`~fortnite_api.protocol.{proto}`",
+            "    (settings are then configured on that transport and ``api_key`` must be omitted).",
+            "    Redirects are not followed unless ``follow_redirects=True``, and retries are disabled",
+            "    unless ``retry=`` is given. ``close()`` only closes a transport the client created.",
+            f"    A transport whose ``request`` is {'not ' if is_async else ''}a coroutine function"
+            " raises ``TypeError``.",
+            '    """',
+            "",
+            "    def __init__(",
+            "        self,",
+            "        api_key: str | None = None,",
+            "        *,",
+            "        base_url: str | None = None,",
+            "        timeout: float | None = None,",
+            "        fortnite_token: str | None = None,",
+            "        retry: RetryConfig | None = None,",
+            "        follow_redirects: bool | None = None,",
+            "        max_redirects: int | None = None,",
+            "        user_agent: str | None = None,",
+            f"        transport: {proto} | None = None,",
+            "    ) -> None:",
+            "        options = _built_in_options(",
+            "            transport,",
+            "            api_key,",
+            "            {",
+            '                "base_url": base_url,',
+            '                "timeout": timeout,',
+            '                "fortnite_token": fortnite_token,',
+            '                "retry": retry,',
+            '                "follow_redirects": follow_redirects,',
+            '                "max_redirects": max_redirects,',
+            '                "user_agent": user_agent,',
+            "            },",
+            "        )",
+            f"        self._owned: {transport} | None = None",
+            "        if transport is not None:",
+            f"            _check_transport(transport, is_async={is_async})",
+            "        else:",
+            f'            self._owned = {transport}(api_key or "", **options)',
+            "            transport = self._owned",
+            f"        self._t: {proto} = transport",
+        ]
         for attr, (prefix, _) in RESOURCES.items():
             rcls = f"Async{prefix}Resource" if is_async else f"{prefix}Resource"
             body.append(f"        self.{attr} = {rcls}(self._t)")
-        body.append("")
+        body += [
+            "",
+            "    @property",
+            f"    def transport(self) -> {proto}:",
+            '        """The transport this client sends requests through."""',
+            "        return self._t",
+            "",
+            f"    {a}def health(self) -> Any:",
+            '        """``GET /health`` - service health check."""',
+            f'        return {aw}self._t.request("GET", "/health", None, retryable=True)',
+            "",
+            f"    {a}def health_version(self) -> Any:",
+            '        """``GET /health/version`` - deployed API version information."""',
+            f'        return {aw}self._t.request("GET", "/health/version", None, retryable=True)',
+            "",
+            f"    {a}def close(self) -> None:",
+            '        """Close the built-in transport; a transport passed with ``transport=`` is left open."""',
+            "        if self._owned is not None:",
+            f"            {aw}self._owned.close()",
+            "",
+            "    def __repr__(self) -> str:",
+            f'        return f"{cls}(transport={{self._t!r}})"',
+            "",
+        ]
         if is_async:
-            body.append("    async def health(self) -> Any:")
-            body.append('        """``GET /health`` - service health check."""')
-            body.append('        return await self._t.request("GET", "/health", None)')
-            body.append("")
-            body.append("    async def health_version(self) -> Any:")
-            body.append('        """``GET /health/version`` - deployed API version information."""')
-            body.append('        return await self._t.request("GET", "/health/version", None)')
-            body.append("")
-            body.append("    async def close(self) -> None:")
-            body.append("        await self._t.close()")
-            body.append("")
-            body.append("    async def __aenter__(self) -> AsyncFortniteAPI:")
-            body.append("        return self")
-            body.append("")
-            body.append("    async def __aexit__(self, *exc: Any) -> None:")
-            body.append("        await self.close()")
+            body += [
+                "    async def __aenter__(self) -> AsyncFortniteAPI:",
+                "        return self",
+                "",
+                "    async def __aexit__(self, *exc: Any) -> None:",
+                "        await self.close()",
+            ]
         else:
-            body.append("    def health(self) -> Any:")
-            body.append('        """``GET /health`` - service health check."""')
-            body.append('        return self._t.request("GET", "/health", None)')
-            body.append("")
-            body.append("    def health_version(self) -> Any:")
-            body.append('        """``GET /health/version`` - deployed API version information."""')
-            body.append('        return self._t.request("GET", "/health/version", None)')
-            body.append("")
-            body.append("    def close(self) -> None:")
-            body.append("        self._t.close()")
-            body.append("")
-            body.append("    def __enter__(self) -> FortniteAPI:")
-            body.append("        return self")
-            body.append("")
-            body.append("    def __exit__(self, *exc: Any) -> None:")
-            body.append("        self.close()")
+            body += [
+                "    def __enter__(self) -> FortniteAPI:",
+                "        return self",
+                "",
+                "    def __exit__(self, *exc: Any) -> None:",
+                "        self.close()",
+            ]
         body.append("")
         return "\n".join(body)
 

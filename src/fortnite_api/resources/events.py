@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..interpret import path_segment
 from ..models import EventLeaderboardDto, EventLeaderboardEntryDto, PlayerWindowStandingDto
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class EventsResource(Resource[SyncTransport]):
+class EventsResource(Resource[SyncTransportProtocol]):
     def get_player_history(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
         """Get a player's event participation history. Requires x-fortnite-token — Epic's history endpoint does
         not accept service auth. Obtain a token via GET /api/v1/oauth/get-token → POST
@@ -19,12 +20,13 @@ class EventsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/events/players/{account_id}/history",
+            f"/events/players/{path_segment(account_id)}/history",
             "v2",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_window_leaderboard(
@@ -45,7 +47,7 @@ class EventsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/events/{event_id}/windows/{event_window_id}/leaderboard",
+            f"/events/{path_segment(event_id)}/windows/{path_segment(event_window_id)}/leaderboard",
             "v2",
             params={
                 "page": page,
@@ -56,6 +58,7 @@ class EventsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=EventLeaderboardDto,
+            retryable=True,
         )
 
     def get_window_leaderboard_player(
@@ -68,12 +71,13 @@ class EventsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/events/{event_id}/windows/{event_window_id}/leaderboard/player",
+            f"/events/{path_segment(event_id)}/windows/{path_segment(event_window_id)}/leaderboard/player",
             "v2",
             params={"accountId": account_id},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[EventLeaderboardEntryDto],
+            retryable=True,
         )
 
     def get_player_window_standing(
@@ -93,16 +97,17 @@ class EventsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/events/{event_id}/windows/{event_window_id}/players/{account_id}",
+            f"/events/{path_segment(event_id)}/windows/{path_segment(event_window_id)}/players/{path_segment(account_id)}",
             "v2",
             params={"rankHint": rank_hint, "maxPages": max_pages},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=PlayerWindowStandingDto,
+            retryable=True,
         )
 
 
-class AsyncEventsResource(Resource[AsyncTransport]):
+class AsyncEventsResource(Resource[AsyncTransportProtocol]):
     async def get_player_history(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
         """Get a player's event participation history. Requires x-fortnite-token — Epic's history endpoint does
         not accept service auth. Obtain a token via GET /api/v1/oauth/get-token → POST
@@ -112,12 +117,13 @@ class AsyncEventsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/events/players/{account_id}/history",
+            f"/events/players/{path_segment(account_id)}/history",
             "v2",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_window_leaderboard(
@@ -138,7 +144,7 @@ class AsyncEventsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/events/{event_id}/windows/{event_window_id}/leaderboard",
+            f"/events/{path_segment(event_id)}/windows/{path_segment(event_window_id)}/leaderboard",
             "v2",
             params={
                 "page": page,
@@ -149,6 +155,7 @@ class AsyncEventsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=EventLeaderboardDto,
+            retryable=True,
         )
 
     async def get_window_leaderboard_player(
@@ -161,12 +168,13 @@ class AsyncEventsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/events/{event_id}/windows/{event_window_id}/leaderboard/player",
+            f"/events/{path_segment(event_id)}/windows/{path_segment(event_window_id)}/leaderboard/player",
             "v2",
             params={"accountId": account_id},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[EventLeaderboardEntryDto],
+            retryable=True,
         )
 
     async def get_player_window_standing(
@@ -186,10 +194,11 @@ class AsyncEventsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/events/{event_id}/windows/{event_window_id}/players/{account_id}",
+            f"/events/{path_segment(event_id)}/windows/{path_segment(event_window_id)}/players/{path_segment(account_id)}",
             "v2",
             params={"rankHint": rank_hint, "maxPages": max_pages},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=PlayerWindowStandingDto,
+            retryable=True,
         )

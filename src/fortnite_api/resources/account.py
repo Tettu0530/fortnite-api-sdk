@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._transport import AsyncTransport, SyncTransport
+from ..interpret import path_segment
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class AccountResource(Resource[SyncTransport]):
+class AccountResource(Resource[SyncTransportProtocol]):
     def get_by_id(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
         """Get account information by Epic account ID.
 
@@ -16,12 +17,13 @@ class AccountResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/account/{account_id}",
+            f"/account/{path_segment(account_id)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_bulk(self, account_ids: list[str], *, fortnite_token: str | None = None) -> Any:
@@ -37,6 +39,7 @@ class AccountResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_by_display_name(self, display_name: str, *, fortnite_token: str | None = None) -> Any:
@@ -46,12 +49,13 @@ class AccountResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/account/displayName/{display_name}",
+            f"/account/displayName/{path_segment(display_name)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_display_names(self, account_ids: list[str], *, fortnite_token: str | None = None) -> Any:
@@ -67,6 +71,7 @@ class AccountResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def bulk_external_display_names(self, body: Any, *, fortnite_token: str | None = None) -> Any:
@@ -82,6 +87,7 @@ class AccountResource(Resource[SyncTransport]):
             json_body=body,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def bulk_external_ids(self, body: Any, *, fortnite_token: str | None = None) -> Any:
@@ -97,6 +103,7 @@ class AccountResource(Resource[SyncTransport]):
             json_body=body,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_by_external_display_name(
@@ -113,12 +120,13 @@ class AccountResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/account/external/{external_auth_type}/displayName/{display_name}",
+            f"/account/external/{path_segment(external_auth_type)}/displayName/{path_segment(display_name)}",
             "v1",
             params={"caseInsensitive": case_insensitive},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_epic_id_sdk(self, account_ids: list[str], *, fortnite_token: str | None = None) -> Any:
@@ -135,6 +143,7 @@ class AccountResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_external_auths(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -144,12 +153,13 @@ class AccountResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/account/{account_id}/externalAuths",
+            f"/account/{path_segment(account_id)}/externalAuths",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     def get_external_auth(self, account_id: str, auth_type: str, *, fortnite_token: str | None = None) -> Any:
@@ -159,16 +169,17 @@ class AccountResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/account/{account_id}/externalAuths/{auth_type}",
+            f"/account/{path_segment(account_id)}/externalAuths/{path_segment(auth_type)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
 
-class AsyncAccountResource(Resource[AsyncTransport]):
+class AsyncAccountResource(Resource[AsyncTransportProtocol]):
     async def get_by_id(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
         """Get account information by Epic account ID.
 
@@ -176,12 +187,13 @@ class AsyncAccountResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/account/{account_id}",
+            f"/account/{path_segment(account_id)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_bulk(self, account_ids: list[str], *, fortnite_token: str | None = None) -> Any:
@@ -197,6 +209,7 @@ class AsyncAccountResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_by_display_name(self, display_name: str, *, fortnite_token: str | None = None) -> Any:
@@ -206,12 +219,13 @@ class AsyncAccountResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/account/displayName/{display_name}",
+            f"/account/displayName/{path_segment(display_name)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_display_names(self, account_ids: list[str], *, fortnite_token: str | None = None) -> Any:
@@ -227,6 +241,7 @@ class AsyncAccountResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def bulk_external_display_names(self, body: Any, *, fortnite_token: str | None = None) -> Any:
@@ -242,6 +257,7 @@ class AsyncAccountResource(Resource[AsyncTransport]):
             json_body=body,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def bulk_external_ids(self, body: Any, *, fortnite_token: str | None = None) -> Any:
@@ -257,6 +273,7 @@ class AsyncAccountResource(Resource[AsyncTransport]):
             json_body=body,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_by_external_display_name(
@@ -273,12 +290,13 @@ class AsyncAccountResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/account/external/{external_auth_type}/displayName/{display_name}",
+            f"/account/external/{path_segment(external_auth_type)}/displayName/{path_segment(display_name)}",
             "v1",
             params={"caseInsensitive": case_insensitive},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_epic_id_sdk(self, account_ids: list[str], *, fortnite_token: str | None = None) -> Any:
@@ -295,6 +313,7 @@ class AsyncAccountResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_external_auths(self, account_id: str, *, fortnite_token: str | None = None) -> Any:
@@ -304,12 +323,13 @@ class AsyncAccountResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/account/{account_id}/externalAuths",
+            f"/account/{path_segment(account_id)}/externalAuths",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )
 
     async def get_external_auth(self, account_id: str, auth_type: str, *, fortnite_token: str | None = None) -> Any:
@@ -319,10 +339,11 @@ class AsyncAccountResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/account/{account_id}/externalAuths/{auth_type}",
+            f"/account/{path_segment(account_id)}/externalAuths/{path_segment(auth_type)}",
             "v1",
             params=None,
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=None,
+            retryable=True,
         )

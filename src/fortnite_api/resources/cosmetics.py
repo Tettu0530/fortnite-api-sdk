@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from .._transport import AsyncTransport, SyncTransport
+from ..interpret import path_segment
 from ..models import CosmeticDto, CosmeticDtoPaginatedResultDto
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class CosmeticsResource(Resource[SyncTransport]):
+class CosmeticsResource(Resource[SyncTransportProtocol]):
     def get_all(
         self,
         *,
@@ -44,6 +45,7 @@ class CosmeticsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=CosmeticDtoPaginatedResultDto,
+            retryable=True,
         )
 
     def get_new(
@@ -66,6 +68,7 @@ class CosmeticsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=CosmeticDtoPaginatedResultDto,
+            retryable=True,
         )
 
     def search(
@@ -100,6 +103,7 @@ class CosmeticsResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=CosmeticDtoPaginatedResultDto,
+            retryable=True,
         )
 
     def get_by_id(self, id: str, *, lang: str | None = None, fortnite_token: str | None = None) -> CosmeticDto:
@@ -109,16 +113,17 @@ class CosmeticsResource(Resource[SyncTransport]):
         """
         return self._t.request(
             "GET",
-            f"/cosmetics/{id}",
+            f"/cosmetics/{path_segment(id)}",
             "v2",
             params={"lang": lang},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=CosmeticDto,
+            retryable=True,
         )
 
 
-class AsyncCosmeticsResource(Resource[AsyncTransport]):
+class AsyncCosmeticsResource(Resource[AsyncTransportProtocol]):
     async def get_all(
         self,
         *,
@@ -155,6 +160,7 @@ class AsyncCosmeticsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=CosmeticDtoPaginatedResultDto,
+            retryable=True,
         )
 
     async def get_new(
@@ -177,6 +183,7 @@ class AsyncCosmeticsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=CosmeticDtoPaginatedResultDto,
+            retryable=True,
         )
 
     async def search(
@@ -211,6 +218,7 @@ class AsyncCosmeticsResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=CosmeticDtoPaginatedResultDto,
+            retryable=True,
         )
 
     async def get_by_id(self, id: str, *, lang: str | None = None, fortnite_token: str | None = None) -> CosmeticDto:
@@ -220,10 +228,11 @@ class AsyncCosmeticsResource(Resource[AsyncTransport]):
         """
         return await self._t.request(
             "GET",
-            f"/cosmetics/{id}",
+            f"/cosmetics/{path_segment(id)}",
             "v2",
             params={"lang": lang},
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=CosmeticDto,
+            retryable=True,
         )

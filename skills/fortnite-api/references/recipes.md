@@ -1,7 +1,7 @@
 # Recipes
 
 End-to-end programs that use only real SDK methods. Each one was type-checked with `mypy --strict`
-against fortnite-api-sdk 0.2.0. All read the key from `FORTNITE_API_KEY`.
+against fortnite-api-sdk 0.3.0. All read the key from `FORTNITE_API_KEY`.
 
 ## Contents
 
@@ -135,7 +135,7 @@ import os
 import sys
 from typing import Any
 
-from fortnite_api import FortniteAPI, FortniteAPIError
+from fortnite_api import FortniteAPI, NotFoundError
 
 
 def resolve_account_id(client: FortniteAPI, name: str, platform: str | None = None) -> str | None:
@@ -144,10 +144,8 @@ def resolve_account_id(client: FortniteAPI, name: str, platform: str | None = No
             account: Any = client.account.get_by_external_display_name(platform, name, case_insensitive=True)
         else:
             account = client.account.get_by_display_name(name)
-    except FortniteAPIError as err:
-        if err.status == 404:
-            return None
-        raise
+    except NotFoundError:
+        return None
     if isinstance(account, list):  # external lookups may return several matches
         account = account[0] if account else {}
     return account.get("id") if isinstance(account, dict) else None
@@ -272,7 +270,7 @@ import os
 import time
 from typing import Any
 
-from fortnite_api import FortniteAPI, FortniteAPIError
+from fortnite_api import FortniteAPI, FortniteAPIError, RateLimitError
 
 
 def main() -> None:
@@ -284,10 +282,10 @@ def main() -> None:
         for _ in range(60):
             try:
                 result: Any = client.oauth.complete({"flowId": flow["flowId"]})
+            except RateLimitError as err:  # polled too fast
+                time.sleep(min(err.retry_after or 10, 60))  # retry_after is uncapped
+                continue
             except FortniteAPIError as err:
-                if err.status == 429:  # polled too fast
-                    time.sleep(10)
-                    continue
                 if "AUTHORIZATION_PENDING" in str(err.data):  # pending reported as an error body
                     time.sleep(5)
                     continue

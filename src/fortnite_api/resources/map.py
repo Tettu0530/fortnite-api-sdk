@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from .._transport import AsyncTransport, SyncTransport
 from ..models import MapDataDto, MapHistoryEntryDto
+from ..protocol import AsyncTransportProtocol, SyncTransportProtocol
 from ._base import Resource
 
 
-class MapResource(Resource[SyncTransport]):
+class MapResource(Resource[SyncTransportProtocol]):
     def get(
         self,
         *,
@@ -28,6 +28,7 @@ class MapResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=MapDataDto,
+            retryable=True,
         )
 
     def get_history(
@@ -45,6 +46,7 @@ class MapResource(Resource[SyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[MapHistoryEntryDto],
+            retryable=True,
         )
 
     def get_image(
@@ -59,7 +61,7 @@ class MapResource(Resource[SyncTransport]):
         )
 
 
-class AsyncMapResource(Resource[AsyncTransport]):
+class AsyncMapResource(Resource[AsyncTransportProtocol]):
     async def get(
         self,
         *,
@@ -80,6 +82,7 @@ class AsyncMapResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=MapDataDto,
+            retryable=True,
         )
 
     async def get_history(
@@ -97,6 +100,7 @@ class AsyncMapResource(Resource[AsyncTransport]):
             json_body=None,
             fortnite_token=fortnite_token,
             response_type=list[MapHistoryEntryDto],
+            retryable=True,
         )
 
     async def get_image(
